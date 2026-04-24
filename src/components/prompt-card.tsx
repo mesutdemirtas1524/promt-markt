@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "./ui/badge";
-import { formatSol } from "@/lib/utils";
+import { PriceTag } from "./price-tag";
 import { Star } from "lucide-react";
 
 export type PromptCardData = {
@@ -36,7 +36,7 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
         )}
         <div className="absolute right-2 top-2">
           <Badge variant={prompt.price_sol === 0 ? "success" : "default"}>
-            {prompt.price_sol === 0 ? "Free" : `${formatSol(prompt.price_sol)} SOL`}
+            <PriceTag sol={prompt.price_sol} size="xs" />
           </Badge>
         </div>
       </div>

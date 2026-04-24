@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatSol } from "@/lib/utils";
+import { PriceTag } from "@/components/price-tag";
 import { CREATOR_SHARE_BPS } from "@/lib/constants";
 
 export default async function DashboardOverview() {
@@ -27,12 +27,12 @@ export default async function DashboardOverview() {
       <Stat title="My listings" value={listings ?? 0} />
       <Stat title="Prompts I own" value={purchased ?? 0} />
       <Stat title="Sales" value={sales?.length ?? 0} />
-      <Stat title="Earned" value={`${formatSol(earned)} SOL`} />
+      <Stat title="Earned" value={<PriceTag sol={earned} size="base" />} />
     </div>
   );
 }
 
-function Stat({ title, value }: { title: string; value: string | number }) {
+function Stat({ title, value }: { title: string; value: React.ReactNode }) {
   return (
     <Card>
       <CardHeader>

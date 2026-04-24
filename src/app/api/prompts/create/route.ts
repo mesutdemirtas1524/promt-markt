@@ -4,6 +4,7 @@ import { verifyPrivyToken } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { PROMPT_LIMITS } from "@/lib/constants";
 
+
 export const runtime = "nodejs";
 
 const createSchema = z.object({
@@ -30,8 +31,11 @@ export async function POST(req: NextRequest) {
   }
   const input = parsed.data;
 
-  if (input.price_sol > 0 && input.price_sol < 0.0001) {
-    return NextResponse.json({ error: "Paid prompts must be at least 0.0001 SOL" }, { status: 400 });
+  if (input.price_sol > 0 && input.price_sol < PROMPT_LIMITS.price.minPaid) {
+    return NextResponse.json(
+      { error: `Paid prompts must be at least ${PROMPT_LIMITS.price.minPaid} SOL` },
+      { status: 400 }
+    );
   }
 
   const supabase = createSupabaseServiceClient();

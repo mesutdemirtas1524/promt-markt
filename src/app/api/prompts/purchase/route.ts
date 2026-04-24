@@ -5,6 +5,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { verifyPurchaseTransaction } from "@/lib/solana";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const bodySchema = z.object({
   prompt_id: z.string().uuid(),

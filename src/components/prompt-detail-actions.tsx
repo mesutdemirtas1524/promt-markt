@@ -18,7 +18,8 @@ import {
 import { formatSol } from "@/lib/utils";
 import { Loader2, Lock, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSyncUser } from "@/hooks/use-sync-user";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
 
 type Props = {
   promptId: string;
@@ -34,14 +35,38 @@ export function PromptDetailActions(props: Props) {
   const { authenticated, login, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const { signAndSendTransaction } = useSignAndSendTransaction();
-  const { dbUser } = useSyncUser();
+  const { dbUser } = useCurrentUser();
+  const { usd } = useSolPrice();
   const router = useRouter();
+
+  const priceUsd = solToUsdString(props.priceSol, usd);
 
   const [buying, setBuying] = useState(false);
   const [submittingRating, setSubmittingRating] = useState(false);
   const [localRating, setLocalRating] = useState<number | null>(props.myRating);
 
   const buyerWallet = wallets[0];
+
+  const pendingKey = `pending-tx-${props.promptId}`;
+
+  async function claimSignature(signature: string): Promise<boolean> {
+    const token = await getAccessToken();
+    const res = await fetch("/api/prompts/purchase", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ prompt_id: props.promptId, tx_signature: signature }),
+    });
+    if (res.ok) {
+      localStorage.removeItem(pendingKey);
+      return true;
+    }
+    const data = await res.json().catch(() => ({}));
+    // Transient: tx not indexed yet — keep the pending record for retry
+    if (res.status >= 500 || /not found/i.test(data?.error ?? "")) return false;
+    // Permanent failure (wrong amount, not buyer, etc.) — forget it
+    localStorage.removeItem(pendingKey);
+    throw new Error(data?.error ?? "Verification failed");
+  }
 
   async function handlePurchase() {
     if (!authenticated) {
@@ -70,6 +95,19 @@ export function PromptDetailActions(props: Props) {
         toast.success("Unlocked!");
         router.refresh();
         return;
+      }
+
+      // Recover a previously-submitted tx before creating a new one.
+      const pending = typeof window !== "undefined" ? localStorage.getItem(pendingKey) : null;
+      if (pending) {
+        toast.info("Checking your previous transaction…");
+        const ok = await claimSignature(pending);
+        if (ok) {
+          toast.success("Previous purchase recovered — unlocked.");
+          router.refresh();
+          return;
+        }
+        toast.info("Previous tx still pending on-chain — retrying in a moment…");
       }
 
       const connection = new Connection(SOLANA_RPC_URL, "confirmed");
@@ -112,17 +150,18 @@ export function PromptDetailActions(props: Props) {
         chain,
       });
       const signature = bs58.encode(result.signature);
+      // Persist immediately — even if the user closes the tab, the next click
+      // will try to claim this signature instead of charging them again.
+      localStorage.setItem(pendingKey, signature);
 
       toast.info("Confirming on-chain…");
-      await connection.confirmTransaction(signature, "confirmed");
-
-      const token = await getAccessToken();
-      const res = await fetch("/api/prompts/purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ prompt_id: props.promptId, tx_signature: signature }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error ?? "Purchase verification failed");
+      const ok = await claimSignature(signature);
+      if (!ok) {
+        toast.error(
+          "Transaction sent but not yet indexed. Click Buy again in ~30s to recover it — you won't be charged twice."
+        );
+        return;
+      }
 
       toast.success("Purchased! Prompt unlocked.");
       router.refresh();
@@ -187,7 +226,9 @@ export function PromptDetailActions(props: Props) {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex items-center gap-2 rounded-full bg-background/80 px-3 py-1.5 text-xs backdrop-blur">
                 <Lock className="h-3.5 w-3.5" />
-                {props.priceSol === 0 ? "Sign in to unlock" : `Unlock for ${formatSol(props.priceSol)} SOL`}
+                {props.priceSol === 0
+                  ? "Sign in to unlock"
+                  : `Unlock for ${formatSol(props.priceSol)} SOL${priceUsd ? ` (${priceUsd})` : ""}`}
               </div>
             </div>
           </div>
@@ -204,7 +245,10 @@ export function PromptDetailActions(props: Props) {
           ) : props.priceSol === 0 ? (
             "Unlock for free"
           ) : (
-            `Buy for ${formatSol(props.priceSol)} SOL`
+            <>
+              Buy for {formatSol(props.priceSol)} SOL
+              {priceUsd && <span className="opacity-70">· {priceUsd}</span>}
+            </>
           )}
         </Button>
       )}

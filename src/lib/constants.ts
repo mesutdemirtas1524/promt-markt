@@ -15,7 +15,7 @@ export const PROMPT_LIMITS = {
   title: { min: 5, max: 100 },
   description: { min: 10, max: 500 },
   promptText: { min: 10, max: 4000 },
-  price: { min: 0, max: 10 },
+  price: { min: 0, max: 10, minPaid: 0.001 },
   images: { min: 1, max: 6 },
   imageSizeMB: 5,
   dailyListings: 10,

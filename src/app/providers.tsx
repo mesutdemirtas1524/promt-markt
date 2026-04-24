@@ -3,6 +3,8 @@
 import { PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { Toaster } from "sonner";
+import { CurrentUserProvider } from "@/hooks/use-current-user";
+import { SolPriceProvider } from "@/hooks/use-sol-price";
 
 const solanaConnectors = toSolanaWalletConnectors();
 
@@ -26,8 +28,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }}
     >
-      {children}
-      <Toaster position="bottom-right" theme="dark" />
+      <CurrentUserProvider>
+        <SolPriceProvider>
+          {children}
+          <Toaster position="bottom-right" theme="dark" />
+        </SolPriceProvider>
+      </CurrentUserProvider>
     </PrivyProvider>
   );
 }

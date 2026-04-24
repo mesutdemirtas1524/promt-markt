@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { PROMPT_LIMITS, ACCEPTED_IMAGE_TYPES } from "@/lib/constants";
-import { useSyncUser } from "@/hooks/use-sync-user";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
 import { Loader2, Upload, X } from "lucide-react";
 import type { Category, Platform } from "@/lib/supabase/types";
 
@@ -19,7 +20,8 @@ type LocalImage = { file: File; preview: string };
 
 export function UploadForm({ categories, platforms }: { categories: Category[]; platforms: Platform[] }) {
   const { authenticated, login, getAccessToken } = usePrivy();
-  const { dbUser } = useSyncUser();
+  const { dbUser, waitForUser } = useCurrentUser();
+  const { usd: solUsd } = useSolPrice();
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -67,18 +69,14 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
       login();
       return;
     }
-    if (!dbUser) {
-      toast.error("Setting up your account… try again in a second.");
-      return;
-    }
 
     const price = parseFloat(priceSol);
     if (Number.isNaN(price) || price < 0 || price > PROMPT_LIMITS.price.max) {
       toast.error("Invalid price");
       return;
     }
-    if (price > 0 && price < 0.0001) {
-      toast.error("Paid prompts must be at least 0.0001 SOL");
+    if (price > 0 && price < PROMPT_LIMITS.price.minPaid) {
+      toast.error(`Paid prompts must be at least ${PROMPT_LIMITS.price.minPaid} SOL`);
       return;
     }
     if (title.length < PROMPT_LIMITS.title.min) {
@@ -97,12 +95,19 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
       toast.error("Add at least 1 image");
       return;
     }
-    if (price > 0 && !dbUser.wallet_address) {
+
+    setSubmitting(true);
+    const user = await waitForUser();
+    if (!user) {
+      setSubmitting(false);
+      toast.error("Account setup is still running. Try again in a moment.");
+      return;
+    }
+    if (price > 0 && !user.wallet_address) {
+      setSubmitting(false);
       toast.error("Paid prompts require a Solana wallet — connect one in settings");
       return;
     }
-
-    setSubmitting(true);
     try {
       const token = await getAccessToken();
       if (!token) throw new Error("Auth token missing");
@@ -307,17 +312,28 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
       {/* Price */}
       <div>
         <Label htmlFor="price">Price in SOL (0 for free)</Label>
-        <Input
-          id="price"
-          type="number"
-          min="0"
-          max={PROMPT_LIMITS.price.max}
-          step="0.0001"
-          value={priceSol}
-          onChange={(e) => setPriceSol(e.target.value)}
-        />
+        <div className="relative">
+          <Input
+            id="price"
+            type="number"
+            min="0"
+            max={PROMPT_LIMITS.price.max}
+            step="0.001"
+            value={priceSol}
+            onChange={(e) => setPriceSol(e.target.value)}
+          />
+          {(() => {
+            const p = parseFloat(priceSol);
+            const dollars = Number.isFinite(p) ? solToUsdString(p, solUsd) : "";
+            return dollars ? (
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                ≈ {dollars}
+              </span>
+            ) : null;
+          })()}
+        </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          You receive 80%. Minimum paid price: 0.0001 SOL. Free prompts can&apos;t be rated.
+          You receive 80%. Minimum paid price: {PROMPT_LIMITS.price.minPaid} SOL. Free prompts can&apos;t be rated.
         </p>
       </div>
 

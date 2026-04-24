@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import { formatSol, formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/utils";
 import { CREATOR_SHARE_BPS } from "@/lib/constants";
+import { PriceTag } from "@/components/price-tag";
 
 export default async function EarningsPage() {
   const user = await getCurrentUser();
@@ -30,8 +31,8 @@ export default async function EarningsPage() {
       <h2 className="mb-6 text-lg font-semibold">Earnings</h2>
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <Box label="Total sales" value={rows.length.toString()} />
-        <Box label="Volume" value={`${formatSol(total)} SOL`} />
-        <Box label="Your earnings (80%)" value={`${formatSol(earned)} SOL`} />
+        <Box label="Volume" value={<PriceTag sol={total} size="base" />} />
+        <Box label="Your earnings (80%)" value={<PriceTag sol={earned} size="base" />} />
       </div>
 
       {rows.length === 0 ? (
@@ -64,8 +65,12 @@ export default async function EarningsPage() {
                       </Link>
                     </td>
                     <td className="px-4 py-2 text-muted-foreground">@{buyer?.username}</td>
-                    <td className="px-4 py-2 text-right">{formatSol(price)}</td>
-                    <td className="px-4 py-2 text-right">{formatSol((price * CREATOR_SHARE_BPS) / 10_000)}</td>
+                    <td className="px-4 py-2 text-right">
+                      <PriceTag sol={price} size="xs" />
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <PriceTag sol={(price * CREATOR_SHARE_BPS) / 10_000} size="xs" />
+                    </td>
                     <td className="px-4 py-2 text-right text-muted-foreground">{formatRelativeTime(r.created_at)}</td>
                     <td className="px-4 py-2 text-right">
                       {r.tx_signature ? (
@@ -92,11 +97,11 @@ export default async function EarningsPage() {
   );
 }
 
-function Box({ label, value }: { label: string; value: string }) {
+function Box({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{value}</p>
+      <div className="mt-1 text-2xl font-bold">{value}</div>
     </div>
   );
 }

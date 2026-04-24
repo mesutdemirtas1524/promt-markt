@@ -59,8 +59,19 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (error || !created) {
-    return NextResponse.json({ error: error?.message ?? "Failed to create user" }, { status: 500 });
+  if (created) return NextResponse.json({ user: created });
+
+  // Likely a concurrent sync beat us to it (React StrictMode double-fire in dev,
+  // or genuine parallel requests). Re-fetch the row and return it.
+  if (error?.code === "23505") {
+    const { data: raced } = await supabase
+      .from("users")
+      .select("*")
+      .eq("privy_id", privyId)
+      .maybeSingle();
+    if (raced) return NextResponse.json({ user: raced });
   }
-  return NextResponse.json({ user: created });
+
+  console.error("sync insert failed", error);
+  return NextResponse.json({ error: error?.message ?? "Failed to create user" }, { status: 500 });
 }

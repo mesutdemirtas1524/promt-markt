@@ -79,12 +79,20 @@ export async function verifyPurchaseTransaction(params: {
   expectedPriceSol: number;
 }): Promise<{ ok: boolean; reason?: string }> {
   const connection = getSolanaConnection();
-  const parsed = await connection.getParsedTransaction(params.signature, {
-    maxSupportedTransactionVersion: 0,
-    commitment: "confirmed",
-  });
 
-  if (!parsed) return { ok: false, reason: "Transaction not found or not confirmed yet." };
+  // Poll up to ~45s — public RPCs often need several seconds before a new tx is indexed.
+  const maxAttempts = 15;
+  let parsed = null;
+  for (let i = 0; i < maxAttempts; i++) {
+    parsed = await connection.getParsedTransaction(params.signature, {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    });
+    if (parsed) break;
+    await new Promise((r) => setTimeout(r, 3_000));
+  }
+
+  if (!parsed) return { ok: false, reason: "Transaction not found after 45 seconds. It may still confirm — try again in a moment." };
   if (parsed.meta?.err) return { ok: false, reason: "Transaction failed on-chain." };
 
   const expectedTotal = solToLamports(params.expectedPriceSol);
