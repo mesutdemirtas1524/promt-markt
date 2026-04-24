@@ -18,8 +18,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
           accentColor: "#7c3aed",
           logo: "/pm-logo.svg",
           walletChainType: "solana-only",
+          showWalletLoginFirst: true,
+          walletList: [
+            "phantom",
+            "metamask",
+            "solflare",
+            "backpack",
+            "detected_solana_wallets",
+            "wallet_connect_qr_solana",
+          ],
         },
-        loginMethods: ["google", "wallet"],
+        loginMethodsAndOrder: {
+          primary: ["phantom", "google"],
+          overflow: [
+            "metamask",
+            "solflare",
+            "backpack",
+            "detected_solana_wallets",
+            "wallet_connect_qr_solana",
+          ],
+        },
         embeddedWallets: {
           solana: { createOnLogin: "users-without-wallets" },
         },
