@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { DashboardGate } from "./dashboard-gate";
 
+export const dynamic = "force-dynamic";
+
 const tabs = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/listings", label: "My listings" },

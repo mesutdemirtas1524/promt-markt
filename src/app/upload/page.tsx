@@ -1,6 +1,7 @@
 import { UploadForm } from "./upload-form";
 import { fetchCategories, fetchPlatforms } from "@/lib/queries";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Upload a prompt" };
 
 export default async function UploadPage() {
