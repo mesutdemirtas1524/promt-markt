@@ -49,7 +49,7 @@ export function Navbar() {
               <Link href="/upload">
                 <Button variant="default" size="sm" className="gap-1.5">
                   <Upload className="h-4 w-4" />
-                  <span className="hidden sm:inline">Upload</span>
+                  <span className="hidden sm:inline">Create Promt</span>
                 </Button>
               </Link>
               <Link href="/dashboard">
