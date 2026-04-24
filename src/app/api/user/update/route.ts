@@ -1,0 +1,54 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { verifyPrivyToken } from "@/lib/auth";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
+
+export const runtime = "nodejs";
+
+const bodySchema = z.object({
+  username: z
+    .string()
+    .min(3)
+    .max(24)
+    .regex(/^[a-z0-9_]+$/, "Only lowercase letters, numbers, and underscore"),
+  display_name: z.string().max(60).optional(),
+  bio: z.string().max(280).optional(),
+});
+
+export async function POST(req: NextRequest) {
+  const authHeader = req.headers.get("authorization") ?? "";
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!token) return NextResponse.json({ error: "Missing token" }, { status: 401 });
+  const privyId = await verifyPrivyToken(token);
+  if (!privyId) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+
+  const parsed = bodySchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+  }
+
+  const supabase = createSupabaseServiceClient();
+  const { data: user } = await supabase.from("users").select("id, username").eq("privy_id", privyId).single();
+  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  if (parsed.data.username !== user.username) {
+    const { data: taken } = await supabase
+      .from("users")
+      .select("id")
+      .eq("username", parsed.data.username)
+      .maybeSingle();
+    if (taken) return NextResponse.json({ error: "Username taken" }, { status: 409 });
+  }
+
+  const { error } = await supabase
+    .from("users")
+    .update({
+      username: parsed.data.username,
+      display_name: parsed.data.display_name?.trim() || null,
+      bio: parsed.data.bio?.trim() || null,
+    })
+    .eq("id", user.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true });
+}
