@@ -204,31 +204,33 @@ export function PromptDetailActions(props: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-border bg-card p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-medium">Prompt</span>
+    <div className="space-y-3.5">
+      <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
+        <div className="flex items-center justify-between border-b border-white/[0.05] px-4 py-2.5">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Prompt
+          </span>
           {props.hasAccess && props.promptText && (
-            <Button size="sm" variant="ghost" onClick={copyPrompt}>
+            <Button size="sm" variant="ghost" onClick={copyPrompt} className="h-7 px-2 text-xs">
               Copy
             </Button>
           )}
         </div>
         {props.hasAccess && props.promptText ? (
-          <pre className="whitespace-pre-wrap break-words font-mono text-sm text-foreground">
+          <pre className="whitespace-pre-wrap break-words p-4 font-mono text-[13px] leading-relaxed text-foreground">
             {props.promptText}
           </pre>
         ) : (
-          <div className="relative min-h-32">
-            <pre className="blur-prompt whitespace-pre-wrap break-words font-mono text-sm text-muted-foreground">
+          <div className="relative min-h-36 p-4">
+            <pre className="blur-prompt whitespace-pre-wrap break-words font-mono text-[13px] leading-relaxed text-muted-foreground">
               {"A majestic lion standing on a cliff at golden hour, ultra detailed, cinematic lighting, 8k resolution, hyper realistic, --ar 16:9 --style raw --v 6"}
             </pre>
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex items-center gap-2 rounded-full bg-background/80 px-3 py-1.5 text-xs backdrop-blur">
+              <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/55 px-3.5 py-1.5 text-xs backdrop-blur">
                 <Lock className="h-3.5 w-3.5" />
                 {props.priceSol === 0
                   ? "Sign in to unlock"
-                  : `Unlock for ${formatSol(props.priceSol)} SOL${priceUsd ? ` (${priceUsd})` : ""}`}
+                  : `Unlock for ${formatSol(props.priceSol)} SOL${priceUsd ? ` · ${priceUsd}` : ""}`}
               </div>
             </div>
           </div>
@@ -236,7 +238,13 @@ export function PromptDetailActions(props: Props) {
       </div>
 
       {!props.hasAccess && !props.isOwnPrompt && (
-        <Button onClick={handlePurchase} size="lg" className="w-full" disabled={buying}>
+        <Button
+          onClick={handlePurchase}
+          size="lg"
+          variant="primary"
+          className="w-full"
+          disabled={buying}
+        >
           {buying ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -254,19 +262,19 @@ export function PromptDetailActions(props: Props) {
       )}
 
       {props.isOwnPrompt && (
-        <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-[11px] text-muted-foreground">
           This is your prompt. Buyers see the prompt text only after purchasing.
         </div>
       )}
 
       {props.hasAccess && !props.isOwnPrompt && props.priceSol > 0 && (
-        <div className="rounded-lg border border-border bg-card p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <Star className="h-4 w-4" />
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+          <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <Star className="h-3.5 w-3.5" />
             {localRating ? "Your rating" : "Rate this prompt"}
           </div>
           <RatingStars value={localRating} onChange={handleRate} readOnly={submittingRating} />
-          <p className="mt-2 text-xs text-muted-foreground">You can change your rating anytime.</p>
+          <p className="mt-2 text-[11px] text-muted-foreground/80">You can change your rating anytime.</p>
         </div>
       )}
     </div>

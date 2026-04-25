@@ -63,27 +63,41 @@ export function FavoriteButton({
     }
   }
 
-  const iconClass = size === "sm" ? "h-4 w-4" : "h-5 w-5";
-  const padClass = size === "sm" ? "h-7 w-7" : "h-9 px-3";
+  if (showLabel) {
+    return (
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
+        disabled={busy}
+        className={cn(
+          "group inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 text-sm font-medium tracking-tight transition-all duration-200 hover:bg-white/[0.07] hover:border-white/[0.14] active:scale-[0.98]",
+          favorited && "border-pink-400/30 bg-pink-500/10 text-pink-300 hover:bg-pink-500/15"
+        )}
+      >
+        <Heart className={cn("h-4 w-4 transition-transform group-hover:scale-110", favorited && "fill-current")} />
+        {favorited ? "Favorited" : "Favorite"}
+        <span className="text-xs tabular-nums opacity-60">· {count}</span>
+      </button>
+    );
+  }
+
+  const dim = size === "sm" ? "h-7 w-7" : "h-9 w-9";
+  const icon = size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4";
 
   return (
     <button
       type="button"
       onClick={toggle}
       aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
-      className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-full bg-background/85 backdrop-blur transition-colors hover:bg-background",
-        showLabel ? "px-3 text-sm" : "",
-        padClass,
-        favorited ? "text-pink-500" : "text-foreground"
-      )}
       disabled={busy}
-    >
-      <Heart className={cn(iconClass, favorited && "fill-current")} />
-      {showLabel && (favorited ? "Favorited" : "Favorite")}
-      {showLabel && initialCount !== undefined && (
-        <span className="text-xs opacity-70">· {count}</span>
+      className={cn(
+        "inline-flex items-center justify-center rounded-full border border-white/10 bg-black/55 backdrop-blur transition-all duration-200 hover:scale-110",
+        dim,
+        favorited ? "text-pink-400" : "text-white/85 hover:text-white"
       )}
+    >
+      <Heart className={cn(icon, favorited && "fill-current")} />
     </button>
   );
 }

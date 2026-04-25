@@ -42,32 +42,45 @@ export default async function UserProfilePage({
   const items = tab === "favorites" ? favorites : prompts;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <div className="mb-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-        <div className="relative h-20 w-20 overflow-hidden rounded-full bg-muted">
-          {user.avatar_url && (
-            <Image
-              src={user.avatar_url}
-              alt={user.display_name ?? user.username}
-              fill
-              sizes="80px"
-              className="object-cover"
-            />
-          )}
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">{user.display_name ?? `@${user.username}`}</h1>
-          <p className="text-sm text-muted-foreground">@{user.username}</p>
-          {user.bio && <p className="mt-2 max-w-2xl text-sm">{user.bio}</p>}
-          {user.wallet_address && (
-            <p className="mt-2 font-mono text-xs text-muted-foreground">
-              {shortAddress(user.wallet_address, 6)}
-            </p>
-          )}
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      {/* Profile header */}
+      <div className="relative mb-10 overflow-hidden rounded-2xl border border-white/[0.07] p-7 sm:p-9">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 50% 50% at 0% 0%, rgba(167, 139, 250, 0.10), transparent 60%)",
+          }}
+        />
+        <div className="relative flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-white/10">
+            {user.avatar_url && (
+              <Image
+                src={user.avatar_url}
+                alt={user.display_name ?? user.username}
+                fill
+                sizes="80px"
+                className="object-cover"
+              />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {user.display_name ?? `@${user.username}`}
+            </h1>
+            <p className="text-sm text-muted-foreground">@{user.username}</p>
+            {user.bio && <p className="mt-3 max-w-2xl text-sm leading-relaxed">{user.bio}</p>}
+            {user.wallet_address && (
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.02] px-2.5 py-1 font-mono text-[10.5px] tracking-tight text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                {shortAddress(user.wallet_address, 6)}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <nav className="mb-6 flex gap-1 border-b border-border">
+      <nav className="mb-6 flex gap-1 border-b border-white/[0.06]">
         <TabLink href={`/u/${user.username}`} active={tab === "prompts"}>
           Prompts
         </TabLink>
@@ -77,11 +90,11 @@ export default async function UserProfilePage({
       </nav>
 
       {items.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.015] p-16 text-center text-sm text-muted-foreground">
           {tab === "favorites" ? "No favorites yet." : "No prompts yet."}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {items.map((p) => (
             <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
           ))}
@@ -104,13 +117,12 @@ function TabLink({
     <Link
       href={href}
       className={
-        "border-b-2 px-4 py-2 text-sm transition-colors " +
-        (active
-          ? "border-foreground font-medium text-foreground"
-          : "border-transparent text-muted-foreground hover:text-foreground")
+        "relative px-4 py-2.5 text-sm tracking-tight transition-colors " +
+        (active ? "text-foreground" : "text-muted-foreground hover:text-foreground")
       }
     >
       {children}
+      {active && <span className="absolute inset-x-3 -bottom-px h-px bg-foreground" />}
     </Link>
   );
 }

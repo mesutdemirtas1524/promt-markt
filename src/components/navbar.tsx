@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "./ui/button";
-import { Search, Upload, LayoutDashboard, LogOut, Heart } from "lucide-react";
+import { Search, Plus, LayoutDashboard, LogOut, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useSolBalance } from "@/hooks/use-sol-balance";
@@ -26,26 +26,36 @@ export function Navbar() {
   const balanceUsd = balance !== null ? solToUsdString(balance, usd) : "";
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/pm-logo.svg" alt="Promt Markt" width={32} height={32} priority />
-            <span className="hidden text-lg font-semibold tracking-tight sm:block">
+    <header className="sticky top-0 z-40 w-full glass-strong">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="flex items-center gap-7">
+          <Link href="/" className="group flex items-center gap-2.5">
+            <Image
+              src="/pm-logo.svg"
+              alt="Promt Markt"
+              width={28}
+              height={28}
+              priority
+              className="transition-transform duration-300 group-hover:rotate-[-8deg]"
+            />
+            <span className="hidden text-[15px] font-semibold tracking-tight sm:block">
               Promt Markt
             </span>
           </Link>
-          <nav className="hidden items-center gap-6 text-sm md:flex">
-            <Link href="/explore" className="text-muted-foreground transition-colors hover:text-foreground">
+          <nav className="hidden items-center gap-1 text-sm md:flex">
+            <Link
+              href="/explore"
+              className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-white/[0.04] hover:text-foreground"
+            >
               Explore
             </Link>
           </nav>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => router.push("/explore")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/[0.05] hover:text-foreground md:hidden"
             aria-label="Search"
           >
             <Search className="h-4 w-4" />
@@ -54,29 +64,31 @@ export function Navbar() {
           {ready && authenticated ? (
             <>
               <Link href="/upload">
-                <Button variant="default" size="sm" className="gap-1.5">
-                  <Upload className="h-4 w-4" />
-                  <span className="hidden sm:inline">Create Promt</span>
+                <Button variant="primary" size="sm" className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Create</span>
                 </Button>
               </Link>
+
               <Link href="/dashboard/favorites">
-                <Button variant="ghost" size="icon" aria-label="Favorites">
+                <Button variant="ghost" size="icon" aria-label="Favorites" className="h-9 w-9">
                   <Heart className="h-4 w-4" />
                 </Button>
               </Link>
+
               <Link href="/dashboard">
-                <Button variant="ghost" size="icon" aria-label="Dashboard">
+                <Button variant="ghost" size="icon" aria-label="Dashboard" className="h-9 w-9">
                   <LayoutDashboard className="h-4 w-4" />
                 </Button>
               </Link>
 
               {dbUser?.wallet_address && balance !== null && (
-                <div className="hidden rounded-md bg-muted px-2.5 py-1 text-right text-xs leading-tight md:block">
-                  <div className="font-medium text-foreground">
-                    {formatSolBalance(balance)} SOL
+                <div className="hidden rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1 text-right text-[11px] leading-tight md:block">
+                  <div className="font-semibold tabular-nums text-foreground">
+                    {formatSolBalance(balance)} <span className="opacity-60">SOL</span>
                   </div>
                   {balanceUsd && (
-                    <div className="text-[10px] text-muted-foreground">{balanceUsd}</div>
+                    <div className="text-[10px] tabular-nums text-muted-foreground">{balanceUsd}</div>
                   )}
                 </div>
               )}
@@ -84,10 +96,10 @@ export function Navbar() {
               {dbUser && (
                 <Link
                   href={`/u/${dbUser.username}`}
-                  className="flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-accent"
+                  className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-white/[0.04]"
                   aria-label="My profile"
                 >
-                  <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
+                  <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white/[0.05] ring-1 ring-white/10">
                     {dbUser.avatar_url && (
                       <Image
                         src={dbUser.avatar_url}
@@ -98,8 +110,8 @@ export function Navbar() {
                       />
                     )}
                   </div>
-                  <div className="hidden min-w-0 max-w-[140px] flex-col text-left leading-tight sm:flex">
-                    <span className="truncate text-xs font-medium text-foreground">
+                  <div className="hidden min-w-0 max-w-[140px] flex-col text-left leading-tight pr-1 sm:flex">
+                    <span className="truncate text-[12px] font-medium text-foreground">
                       {dbUser.display_name ?? `@${dbUser.username}`}
                     </span>
                     {dbUser.display_name && (
@@ -111,12 +123,18 @@ export function Navbar() {
                 </Link>
               )}
 
-              <Button variant="ghost" size="icon" onClick={() => logout()} aria-label="Log out">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => logout()}
+                aria-label="Log out"
+                className="h-9 w-9"
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             </>
           ) : (
-            <Button onClick={() => login()} disabled={!ready} size="sm">
+            <Button onClick={() => login()} disabled={!ready} variant="primary" size="sm">
               {ready ? "Sign in" : "Loading…"}
             </Button>
           )}
