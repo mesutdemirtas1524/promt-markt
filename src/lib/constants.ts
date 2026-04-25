@@ -15,7 +15,13 @@ export const PROMPT_LIMITS = {
   title: { min: 5, max: 100 },
   description: { min: 10, max: 500 },
   promptText: { min: 10, max: 4000 },
-  price: { min: 0, max: 10, minPaid: 0.001 },
+  // Min paid price = 0.002 SOL so the creator's 80% portion (0.0016 SOL =
+  // 1,600,000 lamports) clears Solana's rent-exempt minimum (~890,880
+  // lamports for a 0-byte System account). Below this, transfers to a
+  // creator wallet that has never received SOL fail on-chain with
+  // "insufficient lamports for rent" — wallets surface this as a
+  // misleading "insufficient balance" warning to the buyer.
+  price: { min: 0, max: 10, minPaid: 0.002 },
   images: { min: 1, max: 6 },
   imageSizeMB: 5,
   dailyListings: 10,
