@@ -3,6 +3,7 @@ import { fetchPromptCards } from "@/lib/queries";
 import { PromptCard } from "@/components/prompt-card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Pencil } from "lucide-react";
 
 export default async function MyListingsPage() {
   const user = await getCurrentUser();
@@ -25,7 +26,15 @@ export default async function MyListingsPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {prompts.map((p) => (
-            <PromptCard key={p.id} prompt={p} />
+            <div key={p.id} className="space-y-2">
+              <PromptCard prompt={p} />
+              <Link href={`/dashboard/listings/${p.id}/edit`} className="block">
+                <Button variant="outline" size="sm" className="w-full gap-1.5">
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </Button>
+              </Link>
+            </div>
           ))}
         </div>
       )}

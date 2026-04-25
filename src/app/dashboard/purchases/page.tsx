@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { fetchUserFavoriteIds } from "@/lib/queries";
 import { PromptCard, type PromptCardData } from "@/components/prompt-card";
 
 export default async function MyPurchasesPage() {
@@ -13,7 +14,7 @@ export default async function MyPurchasesPage() {
       `
       created_at,
       prompt:prompts!inner (
-        id, title, price_sol, avg_rating, rating_count,
+        id, title, price_sol, avg_rating, rating_count, favorite_count,
         creator:users!creator_id ( username ),
         images:prompt_images ( image_url, position )
       )
@@ -34,10 +35,13 @@ export default async function MyPurchasesPage() {
       price_sol: Number(p.price_sol),
       avg_rating: p.avg_rating === null ? null : Number(p.avg_rating),
       rating_count: p.rating_count,
+      favorite_count: p.favorite_count ?? 0,
       cover_image: imgs[0]?.image_url ?? null,
       creator_username: creator?.username ?? "unknown",
     };
   });
+
+  const favoriteIds = await fetchUserFavoriteIds(user.id);
 
   return (
     <div>
@@ -49,7 +53,7 @@ export default async function MyPurchasesPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {cards.map((p) => (
-            <PromptCard key={p.id} prompt={p} />
+            <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
           ))}
         </div>
       )}

@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { fetchPromptCards, fetchCategories, fetchPlatforms } from "@/lib/queries";
+import { fetchPromptCards, fetchCategories, fetchPlatforms, fetchUserFavoriteIds } from "@/lib/queries";
 import { PromptCard } from "@/components/prompt-card";
+import { getCurrentUser } from "@/lib/auth";
+import { ExploreSearchInput } from "./search-input";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +10,7 @@ type SearchParams = {
   sort?: "newest" | "top" | "trending";
   price?: "free" | "paid" | "all";
   category?: string;
+  q?: string;
 };
 
 export default async function ExplorePage({
@@ -18,21 +21,33 @@ export default async function ExplorePage({
   const sp = await searchParams;
   const sort = sp.sort ?? "newest";
   const price = sp.price ?? "all";
+  const search = sp.q?.trim() ?? "";
 
-  const [prompts, categories, platforms] = await Promise.all([
-    fetchPromptCards({ orderBy: sort, priceFilter: price, categorySlug: sp.category, limit: 48 }),
+  const viewer = await getCurrentUser();
+  const [prompts, categories, platforms, favoriteIds] = await Promise.all([
+    fetchPromptCards({
+      orderBy: sort,
+      priceFilter: price,
+      categorySlug: sp.category,
+      search: search || undefined,
+      limit: 48,
+    }),
     fetchCategories(),
     fetchPlatforms(),
+    viewer ? fetchUserFavoriteIds(viewer.id) : Promise.resolve(new Set<string>()),
   ]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <h1 className="mb-6 text-2xl font-bold">Explore prompts</h1>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold">Explore prompts</h1>
+        <ExploreSearchInput initialValue={search} preserve={sp} />
+      </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
-        <FilterPill href="/explore?sort=newest" active={sort === "newest"}>Newest</FilterPill>
-        <FilterPill href="/explore?sort=trending" active={sort === "trending"}>Trending</FilterPill>
-        <FilterPill href="/explore?sort=top" active={sort === "top"}>Top rated</FilterPill>
+        <FilterPill href={buildHref(sp, { sort: "newest" })} active={sort === "newest"}>Newest</FilterPill>
+        <FilterPill href={buildHref(sp, { sort: "trending" })} active={sort === "trending"}>Trending</FilterPill>
+        <FilterPill href={buildHref(sp, { sort: "top" })} active={sort === "top"}>Top rated</FilterPill>
         <span className="mx-2 h-6 w-px bg-border" />
         <FilterPill href={buildHref(sp, { price: "all" })} active={price === "all"}>All</FilterPill>
         <FilterPill href={buildHref(sp, { price: "free" })} active={price === "free"}>Free</FilterPill>
@@ -55,14 +70,23 @@ export default async function ExplorePage({
         ))}
       </div>
 
+      {search && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          {prompts.length} result{prompts.length === 1 ? "" : "s"} for &ldquo;{search}&rdquo; ·{" "}
+          <Link href={buildHref(sp, { q: undefined })} className="underline hover:text-foreground">
+            clear search
+          </Link>
+        </p>
+      )}
+
       {prompts.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-12 text-center text-muted-foreground">
-          No prompts match these filters.
+          {search ? `No prompts match "${search}".` : "No prompts match these filters."}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {prompts.map((p) => (
-            <PromptCard key={p.id} prompt={p} />
+            <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
           ))}
         </div>
       )}

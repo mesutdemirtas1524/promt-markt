@@ -4,8 +4,12 @@ import Image from "next/image";
 import { fetchPromptDetail } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PromptDetailActions } from "@/components/prompt-detail-actions";
+import { FavoriteButton } from "@/components/favorite-button";
+import { OwnerActions } from "@/components/owner-actions";
 import { formatRating, formatRelativeTime } from "@/lib/utils";
+import { Pencil } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +19,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
   const result = await fetchPromptDetail(id, viewer?.id ?? null);
   if (!result) notFound();
 
-  const { prompt, hasAccess, myRating, isOwnPrompt } = result;
+  const { prompt, hasAccess, myRating, isOwnPrompt, isFavorited } = result;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -87,10 +91,38 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
-            <span className="text-muted-foreground">Rating</span>
-            <span>{formatRating(prompt.avg_rating, prompt.rating_count)}</span>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
+              <span className="text-muted-foreground">Rating</span>
+              <span>{formatRating(prompt.avg_rating, prompt.rating_count)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
+              <span className="text-muted-foreground">Favorites</span>
+              <span>{prompt.favorite_count ?? 0}</span>
+            </div>
           </div>
+
+          {!isOwnPrompt && (
+            <FavoriteButton
+              promptId={prompt.id}
+              initiallyFavorited={isFavorited}
+              size="md"
+              showLabel
+              initialCount={prompt.favorite_count ?? 0}
+            />
+          )}
+
+          {isOwnPrompt && (
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/dashboard/listings/${prompt.id}/edit`} className="flex-1">
+                <Button variant="outline" className="w-full gap-1.5">
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Button>
+              </Link>
+              <OwnerActions promptId={prompt.id} />
+            </div>
+          )}
 
           <PromptDetailActions
             promptId={prompt.id}

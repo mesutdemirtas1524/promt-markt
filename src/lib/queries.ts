@@ -13,6 +13,7 @@ export async function fetchPromptCards(opts: {
   platformSlug?: string;
   creatorId?: string;
   priceFilter?: "free" | "paid" | "all";
+  search?: string;
 }): Promise<PromptCardData[]> {
   const supabase = createSupabaseServiceClient();
 
@@ -20,7 +21,7 @@ export async function fetchPromptCards(opts: {
     .from("prompts")
     .select(
       `
-      id, title, price_sol, avg_rating, rating_count, created_at, category_id, purchase_count,
+      id, title, price_sol, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count,
       creator:users!creator_id ( username ),
       images:prompt_images ( image_url, position )
     `
@@ -31,6 +32,13 @@ export async function fetchPromptCards(opts: {
   if (opts.creatorId) query = query.eq("creator_id", opts.creatorId);
   if (opts.priceFilter === "free") query = query.eq("price_sol", 0);
   if (opts.priceFilter === "paid") query = query.gt("price_sol", 0);
+
+  const searchTerm = opts.search?.trim();
+  if (searchTerm) {
+    const escaped = searchTerm.replace(/[\\%_]/g, (c) => `\\${c}`);
+    const pattern = `%${escaped}%`;
+    query = query.or(`title.ilike.${pattern},description.ilike.${pattern}`);
+  }
 
   if (opts.orderBy === "top") {
     query = query.order("avg_rating", { ascending: false, nullsFirst: false });
@@ -59,10 +67,18 @@ export async function fetchPromptCards(opts: {
       price_sol: Number(p.price_sol),
       avg_rating: p.avg_rating === null ? null : Number(p.avg_rating),
       rating_count: p.rating_count,
+      favorite_count: p.favorite_count ?? 0,
       cover_image: imgs[0]?.image_url ?? null,
       creator_username: creator?.username ?? "unknown",
     };
   });
+}
+
+/** Fetch the set of prompt IDs the user has favorited (for hydrating heart state). */
+export async function fetchUserFavoriteIds(userId: string): Promise<Set<string>> {
+  const supabase = createSupabaseServiceClient();
+  const { data } = await supabase.from("favorites").select("prompt_id").eq("user_id", userId);
+  return new Set((data ?? []).map((r) => r.prompt_id as string));
 }
 
 export async function fetchCategories() {
@@ -113,14 +129,24 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   }
 
   let myRating: number | null = null;
+  let isFavorited = false;
   if (viewerUserId) {
-    const { data: r } = await supabase
-      .from("ratings")
-      .select("stars")
-      .eq("rater_id", viewerUserId)
-      .eq("prompt_id", promptId)
-      .maybeSingle();
-    myRating = r?.stars ?? null;
+    const [ratingRes, favRes] = await Promise.all([
+      supabase
+        .from("ratings")
+        .select("stars")
+        .eq("rater_id", viewerUserId)
+        .eq("prompt_id", promptId)
+        .maybeSingle(),
+      supabase
+        .from("favorites")
+        .select("user_id")
+        .eq("user_id", viewerUserId)
+        .eq("prompt_id", promptId)
+        .maybeSingle(),
+    ]);
+    myRating = ratingRes.data?.stars ?? null;
+    isFavorited = Boolean(favRes.data);
   }
 
   const images = [...((prompt.images ?? []) as { position: number }[])].sort(
@@ -143,6 +169,7 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
     },
     hasAccess,
     myRating,
+    isFavorited,
     isOwnPrompt: viewerUserId === prompt.creator_id,
   };
 }

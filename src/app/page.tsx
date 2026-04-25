@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { fetchPromptCards, fetchCategories } from "@/lib/queries";
+import { fetchPromptCards, fetchCategories, fetchUserFavoriteIds } from "@/lib/queries";
+import { getCurrentUser } from "@/lib/auth";
 import { PromptCard } from "@/components/prompt-card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Coins, Star } from "lucide-react";
@@ -7,11 +8,13 @@ import { ArrowRight, Sparkles, Coins, Star } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [newest, trending, topRated, categories] = await Promise.all([
+  const viewer = await getCurrentUser();
+  const [newest, trending, topRated, categories, favoriteIds] = await Promise.all([
     fetchPromptCards({ orderBy: "newest", limit: 8 }),
     fetchPromptCards({ orderBy: "trending", limit: 4 }),
     fetchPromptCards({ orderBy: "top", limit: 4 }),
     fetchCategories(),
+    viewer ? fetchUserFavoriteIds(viewer.id) : Promise.resolve(new Set<string>()),
   ]);
 
   const isEmpty = newest.length === 0 && trending.length === 0 && topRated.length === 0;
@@ -64,16 +67,16 @@ export default async function HomePage() {
         <>
           {trending.length > 0 && (
             <Section title="Trending" href="/explore?sort=trending">
-              <Grid items={trending} />
+              <Grid items={trending} favoriteIds={favoriteIds} />
             </Section>
           )}
           {topRated.length > 0 && (
             <Section title="Top rated" href="/explore?sort=top">
-              <Grid items={topRated} />
+              <Grid items={topRated} favoriteIds={favoriteIds} />
             </Section>
           )}
           <Section title="Recently uploaded" href="/explore?sort=newest">
-            <Grid items={newest} />
+            <Grid items={newest} favoriteIds={favoriteIds} />
           </Section>
         </>
       )}
@@ -113,11 +116,17 @@ function Section({ title, href, children }: { title: string; href: string; child
   );
 }
 
-function Grid({ items }: { items: Awaited<ReturnType<typeof fetchPromptCards>> }) {
+function Grid({
+  items,
+  favoriteIds,
+}: {
+  items: Awaited<ReturnType<typeof fetchPromptCards>>;
+  favoriteIds: Set<string>;
+}) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
       {items.map((p) => (
-        <PromptCard key={p.id} prompt={p} />
+        <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
       ))}
     </div>
   );

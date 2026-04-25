@@ -1,7 +1,8 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import { fetchPromptCards } from "@/lib/queries";
+import { fetchPromptCards, fetchUserFavoriteIds } from "@/lib/queries";
+import { getCurrentUser } from "@/lib/auth";
 import { PromptCard } from "@/components/prompt-card";
 import { shortAddress } from "@/lib/utils";
 
@@ -17,7 +18,11 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
     .maybeSingle();
   if (!user) notFound();
 
-  const prompts = await fetchPromptCards({ creatorId: user.id, orderBy: "newest", limit: 48 });
+  const viewer = await getCurrentUser();
+  const [prompts, favoriteIds] = await Promise.all([
+    fetchPromptCards({ creatorId: user.id, orderBy: "newest", limit: 48 }),
+    viewer ? fetchUserFavoriteIds(viewer.id) : Promise.resolve(new Set<string>()),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -52,7 +57,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {prompts.map((p) => (
-            <PromptCard key={p.id} prompt={p} />
+            <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
           ))}
         </div>
       )}
