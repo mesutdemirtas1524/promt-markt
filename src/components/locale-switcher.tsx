@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n/provider";
 import { SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/dictionaries";
 import { Globe, Check } from "lucide-react";
@@ -9,7 +8,6 @@ import { cn } from "@/lib/utils";
 
 export function LocaleSwitcher() {
   const { locale, setLocale, t } = useT();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -29,6 +27,14 @@ export function LocaleSwitcher() {
     };
   }, [open]);
 
+  function pick(code: Locale) {
+    setLocale(code);
+    setOpen(false);
+    // Hard reload so every server component re-renders in the new locale.
+    // router.refresh() doesn't always re-fetch quickly enough in dev/prod.
+    window.location.reload();
+  }
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -41,23 +47,18 @@ export function LocaleSwitcher() {
       </button>
 
       {open && (
-        <div className="glass absolute right-0 top-full z-50 mt-1.5 w-44 overflow-hidden rounded-lg shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1.5 w-44 overflow-hidden rounded-lg border border-border bg-card shadow-xl backdrop-blur-xl">
           {SUPPORTED_LOCALES.map((l) => {
             const active = locale === l.code;
             return (
               <button
                 key={l.code}
                 type="button"
-                onClick={() => {
-                  setLocale(l.code as Locale);
-                  setOpen(false);
-                  // Server components rendered the previous locale's strings —
-                  // ask Next to refetch them so the whole page is in the new language.
-                  router.refresh();
-                }}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(l.code as Locale)}
                 className={cn(
-                  "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-tint-2",
-                  active ? "text-foreground" : "text-muted-foreground"
+                  "flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-tint-2",
+                  active ? "text-foreground font-medium" : "text-foreground/80 hover:text-foreground"
                 )}
               >
                 <span className="text-base leading-none">{l.flag}</span>
