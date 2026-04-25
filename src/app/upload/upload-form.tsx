@@ -19,19 +19,36 @@ import type { Category, Platform } from "@/lib/supabase/types";
 
 type LocalImage = { file: File; preview: string; width?: number; height?: number };
 
-/** Read intrinsic dimensions of an image File via an offscreen <img>. */
+/**
+ * Read intrinsic dimensions of an image File via an offscreen <img>.
+ * Has a hard timeout so the upload UI can't hang on a bad image — if
+ * we can't read dims in 4s we just give up and let the upload proceed
+ * without them (next/image will fall back to natural sizing).
+ */
 function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = document.createElement("img");
-    img.onload = () => {
-      const dims = { width: img.naturalWidth, height: img.naturalHeight };
+    let settled = false;
+    const cleanup = () => {
       URL.revokeObjectURL(url);
-      resolve(dims);
+    };
+    const done = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      fn();
+    };
+    const timer = setTimeout(() => {
+      done(() => reject(new Error("Image dimension read timeout")));
+    }, 4000);
+    img.onload = () => {
+      clearTimeout(timer);
+      done(() => resolve({ width: img.naturalWidth, height: img.naturalHeight }));
     };
     img.onerror = (e) => {
-      URL.revokeObjectURL(url);
-      reject(e);
+      clearTimeout(timer);
+      done(() => reject(e));
     };
     img.src = url;
   });
@@ -53,11 +70,11 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
   const [platformIds, setPlatformIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleFiles(files: FileList | null) {
-    if (!files) return;
+  async function handleFiles(picked: File[]) {
+    if (picked.length === 0) return;
     const remaining = PROMPT_LIMITS.images.max - images.length;
     const next: LocalImage[] = [];
-    for (const f of Array.from(files).slice(0, remaining)) {
+    for (const f of picked.slice(0, remaining)) {
       if (!ACCEPTED_IMAGE_TYPES.includes(f.type as (typeof ACCEPTED_IMAGE_TYPES)[number])) {
         toast.error(`${f.name}: unsupported type`);
         continue;
@@ -70,8 +87,7 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
       try {
         dims = await readImageDimensions(f);
       } catch {
-        // If dim extraction fails the upload still succeeds; render falls
-        // back to natural sizing without aspect-ratio reservation.
+        // Dim read failed or timed out — still upload, just without dims.
       }
       next.push({
         file: f,
@@ -80,7 +96,7 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
         height: dims?.height,
       });
     }
-    setImages((prev) => [...prev, ...next]);
+    if (next.length > 0) setImages((prev) => [...prev, ...next]);
   }
 
   function removeImage(i: number) {
@@ -248,9 +264,12 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
             multiple
             className="hidden"
             onChange={(e) => {
-              const f = e.target.files;
+              // Snapshot the FileList into a plain array BEFORE clearing
+              // the input value — clearing invalidates the FileList and
+              // any later async access would see an empty list.
+              const picked = e.target.files ? Array.from(e.target.files) : [];
               e.target.value = "";
-              void handleFiles(f);
+              void handleFiles(picked);
             }}
           />
         </div>
