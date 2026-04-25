@@ -126,9 +126,15 @@ export function EditPromptForm({
           onChange={(e) => setPromptText(e.target.value)}
           maxLength={PROMPT_LIMITS.promptText.max}
           rows={8}
-          className="font-mono"
+          className="font-prompt"
         />
-        <p className="mt-1 text-xs text-muted-foreground">{promptText.length}/{PROMPT_LIMITS.promptText.max}</p>
+        <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            Wrap customizable bits in <code className="rounded bg-violet-500/15 px-1 py-px text-[11px] text-violet-300">{`{{like this}}`}</code>
+            — buyers see them highlighted as &ldquo;change me&rdquo;.
+          </span>
+          <span>{promptText.length}/{PROMPT_LIMITS.promptText.max}</span>
+        </div>
       </div>
 
       <div>

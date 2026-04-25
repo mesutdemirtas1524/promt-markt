@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
 import { useT } from "@/lib/i18n/provider";
+import { PromptText } from "./prompt-text";
 
 type Props = {
   promptId: string;
@@ -274,12 +275,10 @@ export function PromptDetailActions(props: Props) {
           )}
         </div>
         {props.hasAccess && props.promptText ? (
-          <pre className="whitespace-pre-wrap break-words p-4 font-mono text-[13px] leading-relaxed text-foreground">
-            {props.promptText}
-          </pre>
+          <PromptText text={props.promptText} className="p-4" />
         ) : (
           <div className="relative min-h-36 p-4">
-            <pre className="blur-prompt whitespace-pre-wrap break-words font-mono text-[13px] leading-relaxed text-muted-foreground">
+            <pre className="blur-prompt whitespace-pre-wrap break-words font-prompt text-[14px] leading-relaxed text-muted-foreground">
               {"A majestic lion standing on a cliff at golden hour, ultra detailed, cinematic lighting, 8k resolution, hyper realistic, --ar 16:9 --style raw --v 6"}
             </pre>
             <div className="absolute inset-0 flex items-center justify-center">

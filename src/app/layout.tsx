@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Navbar } from "@/components/navbar";
@@ -14,6 +14,14 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Distinctive font for prompt text — not the generic mono used elsewhere.
+// Visually says "this is the prompt content".
+const jetBrainsMono = JetBrains_Mono({
+  variable: "--font-prompt",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://promtmarkt.com";
@@ -73,7 +81,7 @@ export default function RootLayout({
     // below adjusts both before paint based on the user's cookies.
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} ${jetBrainsMono.variable} h-full antialiased dark`}
       suppressHydrationWarning
     >
       <head>

@@ -92,6 +92,7 @@
   --color-warning: var(--warning);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-prompt: var(--font-prompt);
 }
 
 html, body {
@@ -133,6 +134,32 @@ h1 { letter-spacing: -0.035em; }
     filter: blur(6px);
     user-select: none;
     pointer-events: none;
+  }
+
+  /* Prompt text — distinctive monospace, generous line-height for readability */
+  .font-prompt {
+    font-family: var(--font-prompt), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-feature-settings: "calt", "ss01";
+    letter-spacing: -0.005em;
+    line-height: 1.65;
+  }
+
+  /* Placeholder span: marks a `{{...}}` token in a prompt — buyer should
+     swap this for their own content. Theme-aware violet/pink gradient. */
+  .prompt-placeholder {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.18), rgba(244, 114, 182, 0.16));
+    color: #c4b5fd;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px dashed rgba(167, 139, 250, 0.45);
+    font-style: italic;
+    font-weight: 500;
+    cursor: help;
+  }
+  :root:not(.dark) .prompt-placeholder {
+    color: #6d28d9;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.10), rgba(219, 39, 119, 0.08));
+    border-color: rgba(124, 58, 237, 0.45);
   }
 
   /* Glass surface — premium card look, theme-aware */
