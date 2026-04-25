@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { HighlightablePromptInput } from "@/components/highlightable-prompt-input";
 import { PROMPT_LIMITS } from "@/lib/constants";
 import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
 import { Loader2 } from "lucide-react";
@@ -120,21 +121,16 @@ export function EditPromptForm({
 
       <div>
         <Label htmlFor="prompt">Prompt text (locked)</Label>
-        <Textarea
+        <HighlightablePromptInput
           id="prompt"
           value={promptText}
-          onChange={(e) => setPromptText(e.target.value)}
+          onChange={setPromptText}
           maxLength={PROMPT_LIMITS.promptText.max}
           rows={8}
-          className="font-prompt"
         />
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            Wrap customizable bits in <code className="rounded bg-violet-500/15 px-1 py-px text-[11px] text-violet-300">{`{{like this}}`}</code>
-            — buyers see them highlighted as &ldquo;change me&rdquo;.
-          </span>
-          <span>{promptText.length}/{PROMPT_LIMITS.promptText.max}</span>
-        </div>
+        <p className="mt-1.5 text-right text-xs text-muted-foreground">
+          {promptText.length}/{PROMPT_LIMITS.promptText.max}
+        </p>
       </div>
 
       <div>

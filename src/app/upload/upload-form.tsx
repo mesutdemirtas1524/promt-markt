@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { HighlightablePromptInput } from "@/components/highlightable-prompt-input";
 import { PROMPT_LIMITS, ACCEPTED_IMAGE_TYPES } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
@@ -288,22 +289,17 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
       {/* Prompt text */}
       <div>
         <Label htmlFor="prompt">Prompt text (locked)</Label>
-        <Textarea
+        <HighlightablePromptInput
           id="prompt"
           value={promptText}
-          onChange={(e) => setPromptText(e.target.value)}
+          onChange={setPromptText}
           maxLength={PROMPT_LIMITS.promptText.max}
           rows={8}
-          placeholder={`A portrait of {{your subject}} in cinematic golden-hour light, {{mood/style}}, ultra detailed --ar 16:9 --v 6`}
-          className="font-prompt"
+          placeholder={`A portrait of your subject in cinematic golden-hour light, ultra detailed --ar 16:9 --v 6\n\n(Tip: select any word and press Ctrl+H to mark it as customizable.)`}
         />
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            Wrap customizable bits in <code className="rounded bg-violet-500/15 px-1 py-px text-[11px] text-violet-300">{`{{like this}}`}</code>
-            — buyers see them highlighted as &ldquo;change me&rdquo;.
-          </span>
-          <span>{promptText.length}/{PROMPT_LIMITS.promptText.max}</span>
-        </div>
+        <p className="mt-1.5 text-right text-xs text-muted-foreground">
+          {promptText.length}/{PROMPT_LIMITS.promptText.max}
+        </p>
       </div>
 
       {/* Category */}
