@@ -207,8 +207,8 @@ export function PromptDetailActions(props: Props) {
 
   return (
     <div className="space-y-3.5">
-      <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
-        <div className="flex items-center justify-between border-b border-white/[0.05] px-4 py-2.5">
+      <div className="overflow-hidden rounded-xl border border-border bg-tint-1">
+        <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             {t("detail.prompt")}
           </span>
@@ -228,7 +228,7 @@ export function PromptDetailActions(props: Props) {
               {"A majestic lion standing on a cliff at golden hour, ultra detailed, cinematic lighting, 8k resolution, hyper realistic, --ar 16:9 --style raw --v 6"}
             </pre>
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/55 px-3.5 py-1.5 text-xs backdrop-blur">
+              <div className="flex items-center gap-2 rounded-full border border-zinc-700/50 bg-zinc-900/85 px-3.5 py-1.5 text-xs text-zinc-100 backdrop-blur">
                 <Lock className="h-3.5 w-3.5" />
                 {props.priceSol === 0
                   ? t("detail.signInToUnlock")

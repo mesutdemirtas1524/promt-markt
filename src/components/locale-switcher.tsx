@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n/provider";
 import { SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/dictionaries";
 import { Globe, Check } from "lucide-react";
@@ -8,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 export function LocaleSwitcher() {
   const { locale, setLocale, t } = useT();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -49,6 +51,9 @@ export function LocaleSwitcher() {
                 onClick={() => {
                   setLocale(l.code as Locale);
                   setOpen(false);
+                  // Server components rendered the previous locale's strings —
+                  // ask Next to refetch them so the whole page is in the new language.
+                  router.refresh();
                 }}
                 className={cn(
                   "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-tint-2",

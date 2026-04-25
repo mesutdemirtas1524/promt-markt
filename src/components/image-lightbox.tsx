@@ -51,7 +51,7 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
     <>
       <div className="space-y-3">
         {/* Main slider */}
-        <div className="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-black/40">
+        <div className="group relative overflow-hidden rounded-2xl border border-border bg-black/40">
           <button
             type="button"
             onClick={() => setFullscreen(true)}
@@ -100,7 +100,7 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
                   "relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all sm:h-20 sm:w-20",
                   i === safeIndex
                     ? "border-white/40 ring-2 ring-violet-400/60"
-                    : "border-white/[0.07] opacity-60 hover:opacity-100"
+                    : "border-border opacity-60 hover:opacity-100"
                 )}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}

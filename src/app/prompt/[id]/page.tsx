@@ -42,7 +42,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
           {prompt.images.length > 0 ? (
             <PromptGallery images={prompt.images} alt={prompt.title} />
           ) : (
-            <div className="aspect-square w-full rounded-2xl border border-dashed border-white/[0.08] bg-muted" />
+            <div className="aspect-square w-full rounded-2xl border border-dashed border-border bg-muted" />
           )}
         </div>
 
@@ -66,9 +66,9 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
           {/* Creator */}
           <Link
             href={`/u/${prompt.creator.username}`}
-            className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-all hover:border-white/12 hover:bg-white/[0.04]"
+            className="flex items-center gap-3 rounded-xl border border-border bg-tint-1 p-3 transition-all hover:bg-tint-2"
           >
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-white/10">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
               {prompt.creator.avatar_url && (
                 <Image
                   src={prompt.creator.avatar_url}
@@ -158,7 +158,7 @@ function Stat({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+    <div className="rounded-xl border border-border bg-tint-1 px-3 py-2.5">
       <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
         {icon}
         {label}

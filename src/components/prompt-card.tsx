@@ -48,7 +48,7 @@ export function PromptCard({
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/65 via-black/15 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
           <div className="absolute right-2 top-2 flex flex-col items-end gap-1.5">
-            <div className="rounded-full border border-white/10 bg-black/55 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums backdrop-blur">
+            <div className="rounded-full border border-white/10 bg-black/60 px-2.5 py-0.5 text-[11px] font-semibold text-white tabular-nums backdrop-blur">
               <PriceTag sol={prompt.price_sol} size="xs" />
             </div>
             {isRemoved && <Badge variant="destructive">Removed</Badge>}

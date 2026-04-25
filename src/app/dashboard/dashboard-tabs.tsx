@@ -10,7 +10,7 @@ export function DashboardTabs({
 }) {
   const pathname = usePathname();
   return (
-    <nav className="mb-8 flex gap-1 overflow-x-auto border-b border-white/[0.06]">
+    <nav className="mb-8 flex gap-1 overflow-x-auto border-b border-border">
       {tabs.map((t) => {
         const active = pathname === t.href;
         return (

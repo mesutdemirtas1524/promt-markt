@@ -46,7 +46,7 @@ export default async function UserProfilePage({
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       {/* Profile header */}
-      <div className="relative mb-10 overflow-hidden rounded-2xl border border-white/[0.07] p-7 sm:p-9">
+      <div className="relative mb-10 overflow-hidden rounded-2xl border border-border p-7 sm:p-9">
         <div
           className="absolute inset-0"
           style={{
@@ -73,7 +73,7 @@ export default async function UserProfilePage({
             <p className="text-sm text-muted-foreground">@{user.username}</p>
             {user.bio && <p className="mt-3 max-w-2xl text-sm leading-relaxed">{user.bio}</p>}
             {user.wallet_address && (
-              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.02] px-2.5 py-1 font-mono text-[10.5px] tracking-tight text-muted-foreground">
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-tint-1 px-2.5 py-1 font-mono text-[10.5px] tracking-tight text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 {shortAddress(user.wallet_address, 6)}
               </div>
