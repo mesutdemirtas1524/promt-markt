@@ -5,10 +5,9 @@ import { InfiniteFeed } from "@/components/infinite-feed";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 
-// Stays dynamic because getServerT() reads the locale cookie. To enable
-// ISR here we'd need to either move locale to a route segment ([locale]/)
-// or accept English-only server render and hydrate locale on the client.
-export const dynamic = "force-dynamic";
+// ISR — re-render every 60s. New uploads also trigger on-demand
+// revalidation via revalidatePath('/') in /api/prompts/create.
+export const revalidate = 60;
 
 type SearchParams = {
   sort?: "newest" | "top" | "trending";

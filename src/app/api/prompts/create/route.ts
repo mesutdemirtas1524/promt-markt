@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { verifyPrivyToken } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
@@ -90,6 +91,11 @@ export async function POST(req: NextRequest) {
     }));
     await supabase.from("prompt_platforms").insert(platformRows);
   }
+
+  // Invalidate the cached feeds so the new prompt appears immediately
+  // instead of waiting up to 60s for the next ISR refresh.
+  revalidatePath("/");
+  revalidatePath("/explore");
 
   return NextResponse.json({ prompt_id: prompt.id });
 }

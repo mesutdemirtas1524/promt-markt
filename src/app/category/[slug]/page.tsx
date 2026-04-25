@@ -4,7 +4,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { fetchPromptCards } from "@/lib/queries";
 import { InfiniteFeed } from "@/components/infinite-feed";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
 export async function generateMetadata({
   params,

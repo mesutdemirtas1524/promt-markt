@@ -1,17 +1,24 @@
 import "server-only";
-import { cookies } from "next/headers";
 import { dictionaries, DEFAULT_LOCALE, type Locale, type TranslationKey } from "./dictionaries";
 
 /**
- * Server-side translation helper. Reads the `pm-locale` cookie and returns
- * a `t(key)` function for the current request.
+ * Server-side translation helper. Always returns the default locale so
+ * server components stay statically renderable (cookies() would opt the
+ * route into dynamic mode and defeat ISR).
+ *
+ * Pages that depend on per-user data are still dynamic — they can use
+ * this for the static body text but get the default language. The
+ * client-side `useT()` swaps chrome (navbar, buttons, lightbox, etc.)
+ * to the user's preferred locale after hydration.
+ *
+ * For full translated body text on cached pages we'd need to either
+ * route under [locale]/ or wrap each translated string in a small
+ * client component — both are larger refactors planned separately.
  */
 export async function getServerT() {
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("pm-locale")?.value;
-  const locale: Locale = localeCookie === "tr" ? "tr" : DEFAULT_LOCALE;
+  const locale: Locale = DEFAULT_LOCALE;
   return {
     locale,
-    t: (key: TranslationKey) => dictionaries[locale][key] ?? dictionaries[DEFAULT_LOCALE][key],
+    t: (key: TranslationKey) => dictionaries[locale][key],
   };
 }

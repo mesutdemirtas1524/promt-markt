@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { verifyPrivyToken } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
@@ -68,6 +69,11 @@ export async function POST(req: NextRequest) {
     const rows = input.platform_ids.map((pid) => ({ prompt_id: input.prompt_id, platform_id: pid }));
     await supabase.from("prompt_platforms").insert(rows);
   }
+
+  // Edits change title, description, price — invalidate the feeds so the
+  // change appears immediately even though /prompt/[id] itself is dynamic.
+  revalidatePath("/");
+  revalidatePath("/explore");
 
   return NextResponse.json({ ok: true });
 }

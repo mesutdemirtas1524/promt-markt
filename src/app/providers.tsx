@@ -6,24 +6,15 @@ import { Toaster } from "sonner";
 import { CurrentUserProvider } from "@/hooks/use-current-user";
 import { SolPriceProvider } from "@/hooks/use-sol-price";
 import { FavoritesProvider } from "@/hooks/use-favorites";
-import { ThemeProvider, type Theme } from "@/lib/theme/provider";
+import { ThemeProvider } from "@/lib/theme/provider";
 import { LocaleProvider } from "@/lib/i18n/provider";
-import type { Locale } from "@/lib/i18n/dictionaries";
 
 const solanaConnectors = toSolanaWalletConnectors();
 
-export function Providers({
-  initialTheme,
-  initialLocale,
-  children,
-}: {
-  initialTheme: Theme;
-  initialLocale: Locale;
-  children: React.ReactNode;
-}) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider initialTheme={initialTheme}>
-    <LocaleProvider initialLocale={initialLocale}>
+    <ThemeProvider>
+    <LocaleProvider>
     <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       config={{

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { verifyPrivyToken } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
@@ -41,6 +42,10 @@ export async function POST(req: NextRequest) {
     .update({ status: "removed" })
     .eq("id", parsed.data.prompt_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Drop the prompt from cached feeds right away.
+  revalidatePath("/");
+  revalidatePath("/explore");
 
   return NextResponse.json({ ok: true });
 }

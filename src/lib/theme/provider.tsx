@@ -16,22 +16,18 @@ const ThemeContext = createContext<Ctx>({
   toggleTheme: () => {},
 });
 
-export function ThemeProvider({
-  initialTheme,
-  children,
-}: {
-  initialTheme: Theme;
-  children: React.ReactNode;
-}) {
-  const [theme, setThemeState] = useState<Theme>(initialTheme);
+function readInitialTheme(): Theme {
+  if (typeof document === "undefined") return "dark";
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>(readInitialTheme);
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
+    if (theme === "dark") root.classList.add("dark");
+    else root.classList.remove("dark");
   }, [theme]);
 
   const setTheme = useCallback((t: Theme) => {

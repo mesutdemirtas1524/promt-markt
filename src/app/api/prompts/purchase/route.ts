@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { verifyPrivyToken } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
@@ -120,6 +121,10 @@ export async function POST(req: NextRequest) {
     .from("purchase_intents")
     .update({ consumed_at: new Date().toISOString(), consumed_signature: signature })
     .eq("reference", reference);
+
+  // Sales count and trending order changed — refresh public feeds.
+  revalidatePath("/");
+  revalidatePath("/explore");
 
   return NextResponse.json({ ok: true });
 }

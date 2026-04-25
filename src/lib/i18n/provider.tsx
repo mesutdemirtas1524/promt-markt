@@ -9,29 +9,29 @@ type Ctx = {
   t: (key: TranslationKey) => string;
 };
 
+function readInitialLocale(): Locale {
+  if (typeof document === "undefined") return DEFAULT_LOCALE;
+  const lang = document.documentElement.lang;
+  if (lang === "tr") return "tr";
+  return DEFAULT_LOCALE;
+}
+
 const LocaleContext = createContext<Ctx>({
   locale: DEFAULT_LOCALE,
   setLocale: () => {},
   t: (k) => dictionaries[DEFAULT_LOCALE][k],
 });
 
-export function LocaleProvider({
-  initialLocale,
-  children,
-}: {
-  initialLocale: Locale;
-  children: React.ReactNode;
-}) {
-  const [locale, setLocaleState] = useState<Locale>(initialLocale);
+export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const [locale, setLocaleState] = useState<Locale>(readInitialLocale);
 
-  // Sync <html lang>
+  // Sync <html lang> when locale changes (init script set it on first paint)
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
-    // Persist for SSR — 1 year
     document.cookie = `pm-locale=${l}; path=/; max-age=31536000; SameSite=Lax`;
   }, []);
 

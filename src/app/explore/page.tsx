@@ -4,7 +4,7 @@ import { InfiniteFeed } from "@/components/infinite-feed";
 import { getServerT } from "@/lib/i18n/server";
 import { ExploreSearchInput } from "./search-input";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 type SearchParams = {
   sort?: "newest" | "top" | "trending";

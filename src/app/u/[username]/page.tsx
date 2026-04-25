@@ -9,7 +9,7 @@ import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { InfiniteFeed } from "@/components/infinite-feed";
 import { shortAddress } from "@/lib/utils";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
 export async function generateMetadata({
   params,

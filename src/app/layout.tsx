@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
-import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/dictionaries";
-import type { Theme } from "@/lib/theme/provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,27 +44,43 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+/**
+ * Inline init script. Runs synchronously before React hydrates so the
+ * page paints in the right theme + lang from the get-go (no flash).
+ * Reads pm-theme and pm-locale cookies.
+ */
+const initScript = `
+(function() {
+  try {
+    var ck = document.cookie || "";
+    var t = ck.match(/(?:^|;\\s*)pm-theme=([^;]+)/);
+    var l = ck.match(/(?:^|;\\s*)pm-locale=([^;]+)/);
+    var theme = t ? decodeURIComponent(t[1]) : "dark";
+    var locale = l ? decodeURIComponent(l[1]) : "en";
+    if (theme === "dark") document.documentElement.classList.add("dark");
+    document.documentElement.lang = locale === "tr" ? "tr" : "en";
+  } catch (e) { /* noop */ }
+})();
+`;
+
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const themeCookie = cookieStore.get("pm-theme")?.value;
-  const localeCookie = cookieStore.get("pm-locale")?.value;
-  const initialTheme: Theme = themeCookie === "light" ? "light" : "dark";
-  const initialLocale: Locale = localeCookie === "tr" ? "tr" : DEFAULT_LOCALE;
-
   return (
+    // Default to lang="en" + dark for SSR/static cache. The init script
+    // below adjusts both before paint based on the user's cookies.
     <html
-      lang={initialLocale}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased ${
-        initialTheme === "dark" ? "dark" : ""
-      }`}
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: initScript }} />
+      </head>
       <body className="min-h-full flex flex-col font-sans">
-        <Providers initialTheme={initialTheme} initialLocale={initialLocale}>
+        <Providers>
           <Navbar />
           <main className="flex-1">{children}</main>
           <Footer />
