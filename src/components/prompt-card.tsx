@@ -28,12 +28,17 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const isRemoved = prompt.status === "removed";
   // Render at ~600px wide; the masonry caps cards around that on most screens.
   const renderUrl = renderImageUrl(prompt.cover_image, { width: 600, quality: 78 });
-  // If we know the dims, reserve the box up-front so layout doesn't jump
-  // when the image arrives — big CLS win for masonry feeds.
-  const aspectStyle =
-    prompt.cover_width && prompt.cover_height
-      ? { aspectRatio: `${prompt.cover_width} / ${prompt.cover_height}` }
-      : undefined;
+  // Reserve the box up-front so layout doesn't jump when the image arrives.
+  // Clamp extreme tall ratios (e.g. 9:16 phone screenshots) to 5:8 so a
+  // single card can't stretch a column past the fold and hide the title.
+  // Truly tall images get a slight top/bottom center-crop (object-cover).
+  const naturalRatio =
+    prompt.cover_width && prompt.cover_height ? prompt.cover_width / prompt.cover_height : null;
+  const MIN_RATIO = 0.625; // 5:8 portrait
+  const displayRatio = naturalRatio ? Math.max(naturalRatio, MIN_RATIO) : null;
+  const isClamped = naturalRatio !== null && naturalRatio < MIN_RATIO;
+  const aspectStyle = displayRatio ? { aspectRatio: `${displayRatio}` } : undefined;
+
   return (
     <div className="gradient-border ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
       <Link href={`/prompt/${prompt.id}`} className="block">
@@ -47,7 +52,11 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               decoding="async"
               width={prompt.cover_width ?? undefined}
               height={prompt.cover_height ?? undefined}
-              className="block h-auto w-full transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
+              className={
+                isClamped
+                  ? "absolute inset-0 block h-full w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
+                  : "block h-auto w-full transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
+              }
             />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center text-xs text-muted-foreground">
