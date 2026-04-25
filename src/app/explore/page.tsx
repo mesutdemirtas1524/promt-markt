@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { fetchPromptCards, fetchCategories, fetchPlatforms } from "@/lib/queries";
-import { PromptCard, PromptMasonry } from "@/components/prompt-card";
+import { InfiniteFeed } from "@/components/infinite-feed";
 import { getServerT } from "@/lib/i18n/server";
 import { ExploreSearchInput } from "./search-input";
 
@@ -24,13 +24,14 @@ export default async function ExplorePage({
   const search = sp.q?.trim() ?? "";
 
   const { t } = await getServerT();
+  const PAGE_SIZE = 24;
   const [prompts, categories, platforms] = await Promise.all([
     fetchPromptCards({
       orderBy: sort,
       priceFilter: price,
       categorySlug: sp.category,
       search: search || undefined,
-      limit: 96,
+      limit: PAGE_SIZE,
     }),
     fetchCategories(),
     fetchPlatforms(),
@@ -88,11 +89,17 @@ export default async function ExplorePage({
           {search ? `${t("explore.empty.search")} "${search}".` : t("explore.empty.filters")}
         </div>
       ) : (
-        <PromptMasonry>
-          {prompts.map((p) => (
-            <PromptCard key={p.id} prompt={p} />
-          ))}
-        </PromptMasonry>
+        <InfiniteFeed
+          initialItems={prompts}
+          initialNextOffset={prompts.length}
+          initialHasMore={prompts.length === PAGE_SIZE}
+          filters={{
+            sort,
+            price,
+            category: sp.category,
+            q: search || undefined,
+          }}
+        />
       )}
 
       <div className="mt-12 text-[11px] uppercase tracking-wider text-muted-foreground/70">

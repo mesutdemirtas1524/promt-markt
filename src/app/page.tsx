@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { fetchPromptCards, fetchCategories } from "@/lib/queries";
 import { getServerT } from "@/lib/i18n/server";
-import { PromptCard, PromptMasonry } from "@/components/prompt-card";
+import { InfiniteFeed } from "@/components/infinite-feed";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 
@@ -25,8 +25,9 @@ export default async function HomePage({
   const price = sp.price ?? "all";
 
   const { t } = await getServerT();
+  const PAGE_SIZE = 24;
   const [prompts, categories] = await Promise.all([
-    fetchPromptCards({ orderBy: sort, priceFilter: price, limit: 60 }),
+    fetchPromptCards({ orderBy: sort, priceFilter: price, limit: PAGE_SIZE }),
     fetchCategories(),
   ]);
 
@@ -94,11 +95,12 @@ export default async function HomePage({
           {t("home.empty")}
         </div>
       ) : (
-        <PromptMasonry>
-          {prompts.map((p) => (
-            <PromptCard key={p.id} prompt={p} />
-          ))}
-        </PromptMasonry>
+        <InfiniteFeed
+          initialItems={prompts}
+          initialNextOffset={prompts.length}
+          initialHasMore={prompts.length === PAGE_SIZE}
+          filters={{ sort, price }}
+        />
       )}
 
       {categories.length > 0 && (

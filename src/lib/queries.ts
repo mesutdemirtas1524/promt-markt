@@ -8,6 +8,7 @@ import type { PromptCardData } from "@/components/prompt-card";
  */
 export async function fetchPromptCards(opts: {
   limit?: number;
+  offset?: number;
   orderBy?: "newest" | "top" | "trending";
   categorySlug?: string;
   platformSlug?: string;
@@ -17,6 +18,8 @@ export async function fetchPromptCards(opts: {
   includeRemoved?: boolean;
 }): Promise<PromptCardData[]> {
   const supabase = createSupabaseServiceClient();
+  const limit = opts.limit ?? 24;
+  const offset = opts.offset ?? 0;
 
   let query = supabase
     .from("prompts")
@@ -27,7 +30,7 @@ export async function fetchPromptCards(opts: {
       images:prompt_images ( image_url, position )
     `
     )
-    .limit(opts.limit ?? 24);
+    .range(offset, offset + limit - 1);
 
   if (!opts.includeRemoved) query = query.eq("status", "active");
 

@@ -6,6 +6,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { fetchPromptCards, fetchFavoritedPrompts } from "@/lib/queries";
 import { getServerT } from "@/lib/i18n/server";
 import { PromptCard, PromptMasonry } from "@/components/prompt-card";
+import { InfiniteFeed } from "@/components/infinite-feed";
 import { shortAddress } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -65,9 +66,10 @@ export default async function UserProfilePage({
   if (!user) notFound();
 
   const { t } = await getServerT();
+  const PAGE_SIZE = 24;
   const [prompts, favorites] = await Promise.all([
     tab === "prompts"
-      ? fetchPromptCards({ creatorId: user.id, orderBy: "newest", limit: 48 })
+      ? fetchPromptCards({ creatorId: user.id, orderBy: "newest", limit: PAGE_SIZE })
       : Promise.resolve([]),
     tab === "favorites" ? fetchFavoritedPrompts(user.id, 48) : Promise.resolve([]),
   ]);
@@ -126,6 +128,13 @@ export default async function UserProfilePage({
         <div className="rounded-2xl border border-dashed border-border bg-tint-1 p-16 text-center text-sm text-muted-foreground">
           {tab === "favorites" ? t("common.empty.noFavorites") : t("common.empty.noPrompts")}
         </div>
+      ) : tab === "prompts" ? (
+        <InfiniteFeed
+          initialItems={prompts}
+          initialNextOffset={prompts.length}
+          initialHasMore={prompts.length === PAGE_SIZE}
+          filters={{ sort: "newest", creator: user.id }}
+        />
       ) : (
         <PromptMasonry>
           {items.map((p) => (
