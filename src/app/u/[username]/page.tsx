@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,6 +10,39 @@ import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { shortAddress } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+  const supabase = createSupabaseServiceClient();
+  const { data: user } = await supabase
+    .from("users")
+    .select("username, display_name, bio, avatar_url")
+    .eq("username", username)
+    .maybeSingle();
+  if (!user) return { title: `@${username}` };
+  const title = user.display_name ?? `@${user.username}`;
+  const description = user.bio ?? `Prompts by @${user.username}`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${title} on Promt Markt`,
+      description,
+      type: "profile",
+      images: user.avatar_url ? [{ url: user.avatar_url, alt: title }] : undefined,
+    },
+    twitter: {
+      card: user.avatar_url ? "summary" : "summary",
+      title: `${title} on Promt Markt`,
+      description,
+      images: user.avatar_url ? [user.avatar_url] : undefined,
+    },
+  };
+}
 
 type SearchParams = { tab?: string };
 

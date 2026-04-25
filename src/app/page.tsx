@@ -6,6 +6,9 @@ import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 
+// Per-user favorite overlay on every card prevents safe ISR — see note in
+// /explore. Switch to client-side favorite hydration (own context fetched
+// on mount) before enabling ISR.
 export const dynamic = "force-dynamic";
 
 type SearchParams = {

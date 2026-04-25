@@ -19,7 +19,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://promtmarkt.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: APP_NAME,
     template: `%s · ${APP_NAME}`,
@@ -27,6 +30,20 @@ export const metadata: Metadata = {
   description: APP_DESCRIPTION,
   icons: {
     icon: "/pm-logo.svg",
+  },
+  openGraph: {
+    siteName: APP_NAME,
+    type: "website",
+    url: SITE_URL,
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    images: [{ url: "/pm-logo.svg", width: 512, height: 512, alt: APP_NAME }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    images: ["/pm-logo.svg"],
   },
 };
 

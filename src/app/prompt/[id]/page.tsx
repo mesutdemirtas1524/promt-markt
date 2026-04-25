@@ -1,19 +1,73 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { fetchPromptDetail } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
 import { getServerT } from "@/lib/i18n/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PromptDetailActions } from "@/components/prompt-detail-actions";
 import { FavoriteButton } from "@/components/favorite-button";
 import { OwnerActions } from "@/components/owner-actions";
 import { PromptGallery } from "@/components/image-lightbox";
-import { formatRating, formatRelativeTime } from "@/lib/utils";
+import { formatRating, formatRelativeTime, formatSol } from "@/lib/utils";
 import { Pencil, Star, Heart, ShoppingBag } from "lucide-react";
 
+// Per-user state (isOwnPrompt, hasAccess, isFavorited) prevents safe ISR.
+// generateMetadata still produces fresh OG tags each request.
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = createSupabaseServiceClient();
+  const { data: prompt } = await supabase
+    .from("prompts")
+    .select(
+      `id, title, description, price_sol, status,
+       creator:users!creator_id ( username, display_name ),
+       images:prompt_images ( image_url, position )`
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!prompt || prompt.status !== "active") {
+    return { title: "Prompt not found" };
+  }
+  const creator = Array.isArray(prompt.creator) ? prompt.creator[0] : prompt.creator;
+  const imgs = ((prompt.images ?? []) as { image_url: string; position: number }[]).sort(
+    (a, b) => a.position - b.position
+  );
+  const cover = imgs[0]?.image_url;
+  const price = Number(prompt.price_sol);
+  const priceLabel = price === 0 ? "Free" : `${formatSol(price)} SOL`;
+  const title = `${prompt.title} · ${priceLabel}`;
+  const description = (prompt.description ?? "").slice(0, 200);
+  const creatorName = creator?.display_name ?? `@${creator?.username ?? "creator"}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      authors: [creatorName],
+      images: cover ? [{ url: cover, alt: prompt.title }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: cover ? [cover] : undefined,
+    },
+  };
+}
 
 export default async function PromptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

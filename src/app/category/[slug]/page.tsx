@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { fetchPromptCards, fetchUserFavoriteIds } from "@/lib/queries";
@@ -5,6 +6,25 @@ import { getCurrentUser } from "@/lib/auth";
 import { PromptCard } from "@/components/prompt-card";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = createSupabaseServiceClient();
+  const { data: cat } = await supabase.from("categories").select("name").eq("slug", slug).maybeSingle();
+  if (!cat) return { title: "Category" };
+  return {
+    title: `${cat.name} prompts`,
+    description: `Browse ${cat.name} AI image prompts on Promt Markt.`,
+    openGraph: {
+      title: `${cat.name} prompts on Promt Markt`,
+      description: `Browse ${cat.name} AI image prompts paid in Solana.`,
+    },
+  };
+}
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
