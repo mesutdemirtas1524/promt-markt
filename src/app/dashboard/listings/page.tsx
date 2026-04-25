@@ -9,7 +9,12 @@ export default async function MyListingsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const prompts = await fetchPromptCards({ creatorId: user.id, orderBy: "newest", limit: 50 });
+  const prompts = await fetchPromptCards({
+    creatorId: user.id,
+    orderBy: "newest",
+    limit: 50,
+    includeRemoved: true,
+  });
 
   return (
     <div>

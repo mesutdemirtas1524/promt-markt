@@ -20,9 +20,18 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
   if (!result) notFound();
 
   const { prompt, hasAccess, myRating, isOwnPrompt, isFavorited } = result;
+  const isRemoved = prompt.status === "removed";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      {isRemoved && (
+        <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm">
+          <strong className="text-destructive">This prompt has been removed.</strong>{" "}
+          {isOwnPrompt
+            ? "It's no longer visible on the marketplace, but past buyers still have access."
+            : "It's no longer for sale, but you keep access because you previously purchased it."}
+        </div>
+      )}
       <div className="grid gap-8 lg:grid-cols-5">
         {/* Gallery */}
         <div className="space-y-3 lg:col-span-3">

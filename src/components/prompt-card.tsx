@@ -14,6 +14,7 @@ export type PromptCardData = {
   favorite_count: number;
   cover_image: string | null;
   creator_username: string;
+  status?: "active" | "removed";
 };
 
 export function PromptCard({
@@ -40,10 +41,13 @@ export function PromptCard({
               No image
             </div>
           )}
-          <div className="absolute right-2 top-2">
+          <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
             <Badge variant={prompt.price_sol === 0 ? "success" : "default"}>
               <PriceTag sol={prompt.price_sol} size="xs" />
             </Badge>
+            {prompt.status === "removed" && (
+              <Badge variant="destructive">Removed</Badge>
+            )}
           </div>
         </div>
         <div className="space-y-1 p-3">

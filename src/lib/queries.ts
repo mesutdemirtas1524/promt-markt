@@ -14,6 +14,7 @@ export async function fetchPromptCards(opts: {
   creatorId?: string;
   priceFilter?: "free" | "paid" | "all";
   search?: string;
+  includeRemoved?: boolean;
 }): Promise<PromptCardData[]> {
   const supabase = createSupabaseServiceClient();
 
@@ -21,13 +22,14 @@ export async function fetchPromptCards(opts: {
     .from("prompts")
     .select(
       `
-      id, title, price_sol, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count,
+      id, title, price_sol, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count, status,
       creator:users!creator_id ( username ),
       images:prompt_images ( image_url, position )
     `
     )
-    .eq("status", "active")
     .limit(opts.limit ?? 24);
+
+  if (!opts.includeRemoved) query = query.eq("status", "active");
 
   if (opts.creatorId) query = query.eq("creator_id", opts.creatorId);
   if (opts.priceFilter === "free") query = query.eq("price_sol", 0);
@@ -70,8 +72,52 @@ export async function fetchPromptCards(opts: {
       favorite_count: p.favorite_count ?? 0,
       cover_image: imgs[0]?.image_url ?? null,
       creator_username: creator?.username ?? "unknown",
+      status: (p.status as "active" | "removed") ?? "active",
     };
   });
+}
+
+/** Fetch a list of prompts a user has favorited (joined with prompt details). */
+export async function fetchFavoritedPrompts(userId: string, limit = 48): Promise<PromptCardData[]> {
+  const supabase = createSupabaseServiceClient();
+  const { data } = await supabase
+    .from("favorites")
+    .select(
+      `
+      created_at,
+      prompt:prompts!inner (
+        id, title, price_sol, avg_rating, rating_count, favorite_count, status,
+        creator:users!creator_id ( username ),
+        images:prompt_images ( image_url, position )
+      )
+    `
+    )
+    .eq("user_id", userId)
+    .eq("prompt.status", "active")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data ?? [])
+    .map((row) => {
+      const p = Array.isArray(row.prompt) ? row.prompt[0] : row.prompt;
+      if (!p) return null;
+      const imgs = ((p.images ?? []) as { image_url: string; position: number }[]).sort(
+        (a, b) => a.position - b.position
+      );
+      const creator = Array.isArray(p.creator) ? p.creator[0] : p.creator;
+      return {
+        id: p.id,
+        title: p.title,
+        price_sol: Number(p.price_sol),
+        avg_rating: p.avg_rating === null ? null : Number(p.avg_rating),
+        rating_count: p.rating_count,
+        favorite_count: p.favorite_count ?? 0,
+        cover_image: imgs[0]?.image_url ?? null,
+        creator_username: creator?.username ?? "unknown",
+        status: (p.status as "active" | "removed") ?? "active",
+      } as PromptCardData;
+    })
+    .filter((x): x is PromptCardData => x !== null);
 }
 
 /** Fetch the set of prompt IDs the user has favorited (for hydrating heart state). */
@@ -109,23 +155,28 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
     .eq("id", promptId)
     .maybeSingle();
 
-  if (!prompt || prompt.status !== "active") return null;
+  if (!prompt) return null;
+
+  let hasPurchased = false;
+  if (viewerUserId && viewerUserId !== prompt.creator_id) {
+    const { data: purchase } = await supabase
+      .from("purchases")
+      .select("id")
+      .eq("buyer_id", viewerUserId)
+      .eq("prompt_id", promptId)
+      .maybeSingle();
+    hasPurchased = Boolean(purchase);
+  }
+  const isOwner = Boolean(viewerUserId && viewerUserId === prompt.creator_id);
+
+  // Removed prompts are only visible to the creator and to past buyers.
+  if (prompt.status !== "active" && !isOwner && !hasPurchased) return null;
 
   let hasAccess = false;
-  if (prompt.price_sol === 0) {
-    hasAccess = Boolean(viewerUserId);
-  } else if (viewerUserId) {
-    if (viewerUserId === prompt.creator_id) {
-      hasAccess = true;
-    } else {
-      const { data: purchase } = await supabase
-        .from("purchases")
-        .select("id")
-        .eq("buyer_id", viewerUserId)
-        .eq("prompt_id", promptId)
-        .maybeSingle();
-      hasAccess = Boolean(purchase);
-    }
+  if (isOwner || hasPurchased) {
+    hasAccess = true;
+  } else if (prompt.status === "active" && prompt.price_sol === 0 && viewerUserId) {
+    hasAccess = true;
   }
 
   let myRating: number | null = null;

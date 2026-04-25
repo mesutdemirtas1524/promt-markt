@@ -1,15 +1,27 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import { fetchPromptCards, fetchUserFavoriteIds } from "@/lib/queries";
+import { fetchPromptCards, fetchUserFavoriteIds, fetchFavoritedPrompts } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
 import { PromptCard } from "@/components/prompt-card";
 import { shortAddress } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function UserProfilePage({ params }: { params: Promise<{ username: string }> }) {
+type SearchParams = { tab?: string };
+
+export default async function UserProfilePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ username: string }>;
+  searchParams: Promise<SearchParams>;
+}) {
   const { username } = await params;
+  const { tab: rawTab } = await searchParams;
+  const tab = rawTab === "favorites" ? "favorites" : "prompts";
+
   const supabase = createSupabaseServiceClient();
   const { data: user } = await supabase
     .from("users")
@@ -19,10 +31,15 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
   if (!user) notFound();
 
   const viewer = await getCurrentUser();
-  const [prompts, favoriteIds] = await Promise.all([
-    fetchPromptCards({ creatorId: user.id, orderBy: "newest", limit: 48 }),
+  const [prompts, favorites, favoriteIds] = await Promise.all([
+    tab === "prompts"
+      ? fetchPromptCards({ creatorId: user.id, orderBy: "newest", limit: 48 })
+      : Promise.resolve([]),
+    tab === "favorites" ? fetchFavoritedPrompts(user.id, 48) : Promise.resolve([]),
     viewer ? fetchUserFavoriteIds(viewer.id) : Promise.resolve(new Set<string>()),
   ]);
+
+  const items = tab === "favorites" ? favorites : prompts;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -49,18 +66,51 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
           )}
         </div>
       </div>
-      <h2 className="mb-4 text-lg font-semibold">Prompts</h2>
-      {prompts.length === 0 ? (
+
+      <nav className="mb-6 flex gap-1 border-b border-border">
+        <TabLink href={`/u/${user.username}`} active={tab === "prompts"}>
+          Prompts
+        </TabLink>
+        <TabLink href={`/u/${user.username}?tab=favorites`} active={tab === "favorites"}>
+          Favorites
+        </TabLink>
+      </nav>
+
+      {items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
-          No prompts yet.
+          {tab === "favorites" ? "No favorites yet." : "No prompts yet."}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {prompts.map((p) => (
+          {items.map((p) => (
             <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+function TabLink({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={
+        "border-b-2 px-4 py-2 text-sm transition-colors " +
+        (active
+          ? "border-foreground font-medium text-foreground"
+          : "border-transparent text-muted-foreground hover:text-foreground")
+      }
+    >
+      {children}
+    </Link>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "./ui/button";
-import { Search, Upload, LayoutDashboard, LogOut } from "lucide-react";
+import { Search, Upload, LayoutDashboard, LogOut, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useSolBalance } from "@/hooks/use-sol-balance";
@@ -57,6 +57,11 @@ export function Navbar() {
                 <Button variant="default" size="sm" className="gap-1.5">
                   <Upload className="h-4 w-4" />
                   <span className="hidden sm:inline">Create Promt</span>
+                </Button>
+              </Link>
+              <Link href="/dashboard/favorites">
+                <Button variant="ghost" size="icon" aria-label="Favorites">
+                  <Heart className="h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/dashboard">
