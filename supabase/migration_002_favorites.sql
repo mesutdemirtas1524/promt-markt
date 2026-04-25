@@ -62,12 +62,14 @@ create policy "public read favorites" on public.favorites for select using (true
 
 -- ============================================================
 -- prompts_public view — include favorite_count
+-- Postgres CREATE OR REPLACE VIEW won't reorder/rename existing columns,
+-- so the new column must be appended at the end.
 -- ============================================================
 create or replace view public.prompts_public as
 select
   id, creator_id, title, description, price_sol, category_id,
-  status, avg_rating, rating_count, purchase_count, favorite_count,
-  created_at, updated_at
+  status, avg_rating, rating_count, purchase_count,
+  created_at, updated_at, favorite_count
 from public.prompts
 where status = 'active';
 
