@@ -27,7 +27,7 @@ export async function fetchPromptCards(opts: {
       `
       id, title, price_sol, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count, status,
       creator:users!creator_id ( username ),
-      images:prompt_images ( image_url, position )
+      images:prompt_images ( image_url, position, width, height )
     `
     )
     .range(offset, offset + limit - 1);
@@ -63,8 +63,14 @@ export async function fetchPromptCards(opts: {
   if (error || !data) return [];
 
   return data.map((p) => {
-    const imgs = (p.images ?? []) as { image_url: string; position: number }[];
+    const imgs = (p.images ?? []) as {
+      image_url: string;
+      position: number;
+      width: number | null;
+      height: number | null;
+    }[];
     imgs.sort((a, b) => a.position - b.position);
+    const cover = imgs[0];
     const creator = Array.isArray(p.creator) ? p.creator[0] : p.creator;
     return {
       id: p.id,
@@ -73,7 +79,9 @@ export async function fetchPromptCards(opts: {
       avg_rating: p.avg_rating === null ? null : Number(p.avg_rating),
       rating_count: p.rating_count,
       favorite_count: p.favorite_count ?? 0,
-      cover_image: imgs[0]?.image_url ?? null,
+      cover_image: cover?.image_url ?? null,
+      cover_width: cover?.width ?? null,
+      cover_height: cover?.height ?? null,
       creator_username: creator?.username ?? "unknown",
       status: (p.status as "active" | "removed") ?? "active",
     };
@@ -91,7 +99,7 @@ export async function fetchFavoritedPrompts(userId: string, limit = 48): Promise
       prompt:prompts!inner (
         id, title, price_sol, avg_rating, rating_count, favorite_count, status,
         creator:users!creator_id ( username ),
-        images:prompt_images ( image_url, position )
+        images:prompt_images ( image_url, position, width, height )
       )
     `
     )
@@ -104,9 +112,13 @@ export async function fetchFavoritedPrompts(userId: string, limit = 48): Promise
     .map((row) => {
       const p = Array.isArray(row.prompt) ? row.prompt[0] : row.prompt;
       if (!p) return null;
-      const imgs = ((p.images ?? []) as { image_url: string; position: number }[]).sort(
-        (a, b) => a.position - b.position
-      );
+      const imgs = ((p.images ?? []) as {
+        image_url: string;
+        position: number;
+        width: number | null;
+        height: number | null;
+      }[]).sort((a, b) => a.position - b.position);
+      const cover = imgs[0];
       const creator = Array.isArray(p.creator) ? p.creator[0] : p.creator;
       return {
         id: p.id,
@@ -115,7 +127,9 @@ export async function fetchFavoritedPrompts(userId: string, limit = 48): Promise
         avg_rating: p.avg_rating === null ? null : Number(p.avg_rating),
         rating_count: p.rating_count,
         favorite_count: p.favorite_count ?? 0,
-        cover_image: imgs[0]?.image_url ?? null,
+        cover_image: cover?.image_url ?? null,
+        cover_width: cover?.width ?? null,
+        cover_height: cover?.height ?? null,
         creator_username: creator?.username ?? "unknown",
         status: (p.status as "active" | "removed") ?? "active",
       } as PromptCardData;
@@ -150,7 +164,7 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
       `
       *,
       creator:users!creator_id ( id, username, display_name, avatar_url, wallet_address ),
-      images:prompt_images ( id, image_url, position ),
+      images:prompt_images ( id, image_url, position, width, height ),
       category:categories ( id, name, slug ),
       platforms:prompt_platforms ( platforms ( id, name, slug ) )
     `

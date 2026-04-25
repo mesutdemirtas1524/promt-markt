@@ -16,7 +16,25 @@ import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
 import { Loader2, Upload, X } from "lucide-react";
 import type { Category, Platform } from "@/lib/supabase/types";
 
-type LocalImage = { file: File; preview: string };
+type LocalImage = { file: File; preview: string; width?: number; height?: number };
+
+/** Read intrinsic dimensions of an image File via an offscreen <img>. */
+function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = document.createElement("img");
+    img.onload = () => {
+      const dims = { width: img.naturalWidth, height: img.naturalHeight };
+      URL.revokeObjectURL(url);
+      resolve(dims);
+    };
+    img.onerror = (e) => {
+      URL.revokeObjectURL(url);
+      reject(e);
+    };
+    img.src = url;
+  });
+}
 
 export function UploadForm({ categories, platforms }: { categories: Category[]; platforms: Platform[] }) {
   const { authenticated, login, getAccessToken } = usePrivy();
@@ -34,7 +52,7 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
   const [platformIds, setPlatformIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  function handleFiles(files: FileList | null) {
+  async function handleFiles(files: FileList | null) {
     if (!files) return;
     const remaining = PROMPT_LIMITS.images.max - images.length;
     const next: LocalImage[] = [];
@@ -47,7 +65,19 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
         toast.error(`${f.name}: exceeds ${PROMPT_LIMITS.imageSizeMB}MB`);
         continue;
       }
-      next.push({ file: f, preview: URL.createObjectURL(f) });
+      let dims: { width: number; height: number } | undefined;
+      try {
+        dims = await readImageDimensions(f);
+      } catch {
+        // If dim extraction fails the upload still succeeds; render falls
+        // back to natural sizing without aspect-ratio reservation.
+      }
+      next.push({
+        file: f,
+        preview: URL.createObjectURL(f),
+        width: dims?.width,
+        height: dims?.height,
+      });
     }
     setImages((prev) => [...prev, ...next]);
   }
@@ -147,7 +177,11 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
           price_sol: price,
           category_id: categoryId,
           platform_ids: platformIds,
-          image_urls: uploads.map((u) => u.publicUrl),
+          images: uploads.map((u, i) => ({
+            url: u.publicUrl,
+            width: images[i].width,
+            height: images[i].height,
+          })),
         }),
       });
       if (!createRes.ok) throw new Error((await createRes.json()).error ?? "Create failed");
@@ -213,8 +247,9 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
             multiple
             className="hidden"
             onChange={(e) => {
-              handleFiles(e.target.files);
+              const f = e.target.files;
               e.target.value = "";
+              void handleFiles(f);
             }}
           />
         </div>

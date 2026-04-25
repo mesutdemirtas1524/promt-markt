@@ -4,8 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/provider";
+import { renderImageUrl } from "@/lib/image";
 
-type Img = { id: string; image_url: string; position: number };
+type Img = {
+  id: string;
+  image_url: string;
+  position: number;
+  width?: number | null;
+  height?: number | null;
+};
 
 export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
   const [index, setIndex] = useState(0);
@@ -61,10 +68,12 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
             <div className="flex max-h-[80vh] min-h-[420px] items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={current.image_url}
+                src={renderImageUrl(current.image_url, { width: 1400, quality: 85 }) ?? current.image_url}
                 alt={alt}
                 loading="eager"
                 decoding="async"
+                width={current.width ?? undefined}
+                height={current.height ?? undefined}
                 className="block max-h-[80vh] w-auto max-w-full object-contain"
               />
             </div>
@@ -105,7 +114,7 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={img.image_url}
+                  src={renderImageUrl(img.image_url, { width: 160, height: 160, resize: "cover", quality: 70 }) ?? img.image_url}
                   alt=""
                   loading="lazy"
                   decoding="async"

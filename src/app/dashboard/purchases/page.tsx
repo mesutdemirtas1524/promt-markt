@@ -17,7 +17,7 @@ export default async function MyPurchasesPage() {
       prompt:prompts!inner (
         id, title, price_sol, avg_rating, rating_count, favorite_count,
         creator:users!creator_id ( username ),
-        images:prompt_images ( image_url, position )
+        images:prompt_images ( image_url, position, width, height )
       )
     `
     )
@@ -26,9 +26,13 @@ export default async function MyPurchasesPage() {
 
   const cards: PromptCardData[] = (data ?? []).map((row) => {
     const p = Array.isArray(row.prompt) ? row.prompt[0] : row.prompt;
-    const imgs = ((p?.images ?? []) as { image_url: string; position: number }[]).sort(
-      (a, b) => a.position - b.position
-    );
+    const imgs = ((p?.images ?? []) as {
+      image_url: string;
+      position: number;
+      width: number | null;
+      height: number | null;
+    }[]).sort((a, b) => a.position - b.position);
+    const cover = imgs[0];
     const creator = Array.isArray(p?.creator) ? p?.creator[0] : p?.creator;
     return {
       id: p.id,
@@ -37,7 +41,9 @@ export default async function MyPurchasesPage() {
       avg_rating: p.avg_rating === null ? null : Number(p.avg_rating),
       rating_count: p.rating_count,
       favorite_count: p.favorite_count ?? 0,
-      cover_image: imgs[0]?.image_url ?? null,
+      cover_image: cover?.image_url ?? null,
+      cover_width: cover?.width ?? null,
+      cover_height: cover?.height ?? null,
       creator_username: creator?.username ?? "unknown",
     };
   });

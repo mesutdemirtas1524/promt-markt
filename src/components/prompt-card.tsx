@@ -6,6 +6,7 @@ import { PriceTag } from "./price-tag";
 import { Star, Heart } from "lucide-react";
 import { FavoriteButton } from "./favorite-button";
 import { useFavorites } from "@/hooks/use-favorites";
+import { renderImageUrl } from "@/lib/image";
 
 export type PromptCardData = {
   id: string;
@@ -15,6 +16,8 @@ export type PromptCardData = {
   rating_count: number;
   favorite_count: number;
   cover_image: string | null;
+  cover_width?: number | null;
+  cover_height?: number | null;
   creator_username: string;
   status?: "active" | "removed";
 };
@@ -23,17 +26,27 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const { isFavorited } = useFavorites();
   const favorited = isFavorited(prompt.id);
   const isRemoved = prompt.status === "removed";
+  // Render at ~600px wide; the masonry caps cards around that on most screens.
+  const renderUrl = renderImageUrl(prompt.cover_image, { width: 600, quality: 78 });
+  // If we know the dims, reserve the box up-front so layout doesn't jump
+  // when the image arrives — big CLS win for masonry feeds.
+  const aspectStyle =
+    prompt.cover_width && prompt.cover_height
+      ? { aspectRatio: `${prompt.cover_width} / ${prompt.cover_height}` }
+      : undefined;
   return (
     <div className="gradient-border ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
       <Link href={`/prompt/${prompt.id}`} className="block">
-        <div className="relative w-full overflow-hidden bg-muted">
-          {prompt.cover_image ? (
+        <div className="relative w-full overflow-hidden bg-muted" style={aspectStyle}>
+          {renderUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={prompt.cover_image}
+              src={renderUrl}
               alt={prompt.title}
               loading="lazy"
               decoding="async"
+              width={prompt.cover_width ?? undefined}
+              height={prompt.cover_height ?? undefined}
               className="block h-auto w-full transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
             />
           ) : (

@@ -7,6 +7,12 @@ import { PROMPT_LIMITS } from "@/lib/constants";
 
 export const runtime = "nodejs";
 
+const imageSchema = z.object({
+  url: z.string().url(),
+  width: z.number().int().positive().max(20_000).optional(),
+  height: z.number().int().positive().max(20_000).optional(),
+});
+
 const createSchema = z.object({
   title: z.string().min(PROMPT_LIMITS.title.min).max(PROMPT_LIMITS.title.max),
   description: z.string().min(PROMPT_LIMITS.description.min).max(PROMPT_LIMITS.description.max),
@@ -14,8 +20,11 @@ const createSchema = z.object({
   price_sol: z.number().min(0).max(PROMPT_LIMITS.price.max),
   category_id: z.number().int().nullable(),
   platform_ids: z.array(z.number().int()).max(10),
-  image_urls: z.array(z.string().url()).min(PROMPT_LIMITS.images.min).max(PROMPT_LIMITS.images.max),
-});
+  // Backwards-compatible: accept the old string-array shape OR the new
+  // object-with-dims shape so the API doesn't break in flight.
+  image_urls: z.array(z.string().url()).min(PROMPT_LIMITS.images.min).max(PROMPT_LIMITS.images.max).optional(),
+  images: z.array(imageSchema).min(PROMPT_LIMITS.images.min).max(PROMPT_LIMITS.images.max).optional(),
+}).refine((d) => d.images || d.image_urls, { message: "Provide images or image_urls" });
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get("authorization") ?? "";
@@ -59,9 +68,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: pErr?.message ?? "Failed to create" }, { status: 500 });
   }
 
-  const imageRows = input.image_urls.map((url, i) => ({
+  const imageInputs: { url: string; width?: number; height?: number }[] =
+    input.images ?? (input.image_urls ?? []).map((url) => ({ url }));
+  const imageRows = imageInputs.map((img, i) => ({
     prompt_id: prompt.id,
-    image_url: url,
+    image_url: img.url,
+    width: img.width ?? null,
+    height: img.height ?? null,
     position: i + 1,
   }));
   const { error: imgErr } = await supabase.from("prompt_images").insert(imageRows);
