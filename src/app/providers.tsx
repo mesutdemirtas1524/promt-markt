@@ -5,11 +5,24 @@ import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { Toaster } from "sonner";
 import { CurrentUserProvider } from "@/hooks/use-current-user";
 import { SolPriceProvider } from "@/hooks/use-sol-price";
+import { ThemeProvider, type Theme } from "@/lib/theme/provider";
+import { LocaleProvider } from "@/lib/i18n/provider";
+import type { Locale } from "@/lib/i18n/dictionaries";
 
 const solanaConnectors = toSolanaWalletConnectors();
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  initialTheme,
+  initialLocale,
+  children,
+}: {
+  initialTheme: Theme;
+  initialLocale: Locale;
+  children: React.ReactNode;
+}) {
   return (
+    <ThemeProvider initialTheme={initialTheme}>
+    <LocaleProvider initialLocale={initialLocale}>
     <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       config={{
@@ -49,9 +62,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <CurrentUserProvider>
         <SolPriceProvider>
           {children}
-          <Toaster position="bottom-right" theme="dark" />
+          <Toaster position="bottom-right" />
         </SolPriceProvider>
       </CurrentUserProvider>
     </PrivyProvider>
+    </LocaleProvider>
+    </ThemeProvider>
   );
 }

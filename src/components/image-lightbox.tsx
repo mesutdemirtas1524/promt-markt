@@ -3,12 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/provider";
 
 type Img = { id: string; image_url: string; position: number };
 
 export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
   const [index, setIndex] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
+  const { t } = useT();
 
   const safeIndex = Math.min(index, images.length - 1);
   const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
@@ -54,7 +56,7 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
             type="button"
             onClick={() => setFullscreen(true)}
             className="block w-full"
-            aria-label="Open fullscreen"
+            aria-label={t("card.openFullscreen")}
           >
             <div className="flex max-h-[80vh] min-h-[420px] items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -71,7 +73,7 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
           {/* Expand affordance — top right */}
           <div className="pointer-events-none absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white/80 opacity-0 backdrop-blur transition-opacity duration-200 group-hover:opacity-100">
             <Expand className="h-3 w-3" />
-            Click to enlarge
+            {t("card.clickEnlarge")}
           </div>
 
           {images.length > 1 && (

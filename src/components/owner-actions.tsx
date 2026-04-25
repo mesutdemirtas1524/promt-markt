@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Trash2, Loader2 } from "lucide-react";
+import { useT } from "@/lib/i18n/provider";
 
 export function OwnerActions({ promptId }: { promptId: string }) {
   const { getAccessToken } = usePrivy();
   const router = useRouter();
+  const { t } = useT();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -52,7 +54,7 @@ export function OwnerActions({ promptId }: { promptId: string }) {
       ) : (
         <Trash2 className="h-4 w-4" />
       )}
-      {confirming ? "Click again to confirm" : "Delete"}
+      {confirming ? t("detail.deleteConfirm") : t("detail.delete")}
     </Button>
   );
 }

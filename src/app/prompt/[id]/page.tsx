@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { fetchPromptDetail } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
+import { getServerT } from "@/lib/i18n/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PromptDetailActions } from "@/components/prompt-detail-actions";
@@ -19,6 +20,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
   const viewer = await getCurrentUser();
   const result = await fetchPromptDetail(id, viewer?.id ?? null);
   if (!result) notFound();
+  const { t } = await getServerT();
 
   const { prompt, hasAccess, myRating, isOwnPrompt, isFavorited } = result;
   const isRemoved = prompt.status === "removed";
@@ -27,11 +29,9 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       {isRemoved && (
         <div className="mb-6 rounded-xl border border-red-500/25 bg-red-500/[0.06] p-4 text-sm">
-          <strong className="text-red-300">This prompt has been removed.</strong>{" "}
+          <strong className="text-red-400">{t("detail.removed.title")}</strong>{" "}
           <span className="text-muted-foreground">
-            {isOwnPrompt
-              ? "It's no longer visible on the marketplace, but past buyers still have access."
-              : "It's no longer for sale, but you keep access because you previously purchased it."}
+            {isOwnPrompt ? t("detail.removed.owner") : t("detail.removed.buyer")}
           </span>
         </div>
       )}
@@ -87,7 +87,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
                 <div className="truncate text-xs text-muted-foreground">@{prompt.creator.username}</div>
               )}
               <div className="text-[11px] text-muted-foreground">
-                {formatRelativeTime(prompt.created_at)} · {prompt.purchase_count} sales
+                {formatRelativeTime(prompt.created_at)} · {prompt.purchase_count} {t("detail.sales")}
               </div>
             </div>
           </Link>
@@ -96,17 +96,17 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
           <div className="grid grid-cols-3 gap-2">
             <Stat
               icon={<Star className="h-3.5 w-3.5 text-amber-300" />}
-              label="Rating"
+              label={t("detail.stat.rating")}
               value={formatRating(prompt.avg_rating, prompt.rating_count)}
             />
             <Stat
               icon={<Heart className="h-3.5 w-3.5 text-pink-400" />}
-              label="Favorites"
+              label={t("detail.stat.favorites")}
               value={String(prompt.favorite_count ?? 0)}
             />
             <Stat
               icon={<ShoppingBag className="h-3.5 w-3.5 text-violet-300" />}
-              label="Sales"
+              label={t("detail.stat.sales")}
               value={String(prompt.purchase_count ?? 0)}
             />
           </div>
@@ -126,7 +126,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
               <Link href={`/dashboard/listings/${prompt.id}/edit`} className="flex-1">
                 <Button variant="outline" className="w-full gap-1.5">
                   <Pencil className="h-4 w-4" />
-                  Edit
+                  {t("detail.edit")}
                 </Button>
               </Link>
               <OwnerActions promptId={prompt.id} />

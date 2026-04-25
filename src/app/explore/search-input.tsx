@@ -15,9 +15,11 @@ type SP = {
 export function ExploreSearchInput({
   initialValue,
   preserve,
+  placeholder,
 }: {
   initialValue: string;
   preserve: SP;
+  placeholder?: string;
 }) {
   const router = useRouter();
   const [value, setValue] = useState(initialValue);
@@ -43,7 +45,7 @@ export function ExploreSearchInput({
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="search"
-        placeholder="Search title or description…"
+        placeholder={placeholder ?? "Search title or description…"}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         className="pl-9 pr-9"

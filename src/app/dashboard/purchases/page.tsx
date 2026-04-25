@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { getServerT } from "@/lib/i18n/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { fetchUserFavoriteIds } from "@/lib/queries";
 import { PromptCard, PromptMasonry, type PromptCardData } from "@/components/prompt-card";
@@ -6,6 +7,7 @@ import { PromptCard, PromptMasonry, type PromptCardData } from "@/components/pro
 export default async function MyPurchasesPage() {
   const user = await getCurrentUser();
   if (!user) return null;
+  const { t } = await getServerT();
 
   const supabase = createSupabaseServiceClient();
   const { data } = await supabase
@@ -45,10 +47,10 @@ export default async function MyPurchasesPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold">My library</h2>
+      <h2 className="mb-6 text-lg font-semibold tracking-tight">{t("dashboard.myLibrary")}</h2>
       {cards.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
-          Prompts you purchase or unlock will appear here.
+        <div className="rounded-2xl border border-dashed border-border bg-tint-1 p-16 text-center text-sm text-muted-foreground">
+          {t("dashboard.empty.library")}
         </div>
       ) : (
         <PromptMasonry>

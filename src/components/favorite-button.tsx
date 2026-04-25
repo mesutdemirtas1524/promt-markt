@@ -5,6 +5,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { toast } from "sonner";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/provider";
 
 type Props = {
   promptId: string;
@@ -24,6 +25,7 @@ export function FavoriteButton({
   onCountChange,
 }: Props) {
   const { authenticated, login, getAccessToken } = usePrivy();
+  const { t } = useT();
   const [favorited, setFavorited] = useState(initiallyFavorited);
   const [count, setCount] = useState(initialCount ?? 0);
   const [busy, setBusy] = useState(false);
@@ -68,15 +70,15 @@ export function FavoriteButton({
       <button
         type="button"
         onClick={toggle}
-        aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
+        aria-label={favorited ? t("fav.remove") : t("fav.add")}
         disabled={busy}
         className={cn(
-          "group inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 text-sm font-medium tracking-tight transition-all duration-200 hover:bg-white/[0.07] hover:border-white/[0.14] active:scale-[0.98]",
-          favorited && "border-pink-400/30 bg-pink-500/10 text-pink-300 hover:bg-pink-500/15"
+          "group inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-tint-1 px-4 text-sm font-medium tracking-tight transition-all duration-200 hover:bg-tint-2 active:scale-[0.98]",
+          favorited && "border-pink-400/30 bg-pink-500/10 text-pink-400 hover:bg-pink-500/15"
         )}
       >
         <Heart className={cn("h-4 w-4 transition-transform group-hover:scale-110", favorited && "fill-current")} />
-        {favorited ? "Favorited" : "Favorite"}
+        {favorited ? t("fav.favorited") : t("fav.favorite")}
         <span className="text-xs tabular-nums opacity-60">· {count}</span>
       </button>
     );
@@ -89,7 +91,7 @@ export function FavoriteButton({
     <button
       type="button"
       onClick={toggle}
-      aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
+      aria-label={favorited ? t("fav.remove") : t("fav.add")}
       disabled={busy}
       className={cn(
         "inline-flex items-center justify-center rounded-full border border-white/10 bg-black/55 backdrop-blur transition-all duration-200 hover:scale-110",

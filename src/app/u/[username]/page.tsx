@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { fetchPromptCards, fetchUserFavoriteIds, fetchFavoritedPrompts } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
+import { getServerT } from "@/lib/i18n/server";
 import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { shortAddress } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ export default async function UserProfilePage({
     .maybeSingle();
   if (!user) notFound();
 
+  const { t } = await getServerT();
   const viewer = await getCurrentUser();
   const [prompts, favorites, favoriteIds] = await Promise.all([
     tab === "prompts"
@@ -80,18 +82,18 @@ export default async function UserProfilePage({
         </div>
       </div>
 
-      <nav className="mb-6 flex gap-1 border-b border-white/[0.06]">
+      <nav className="mb-6 flex gap-1 border-b border-border">
         <TabLink href={`/u/${user.username}`} active={tab === "prompts"}>
-          Prompts
+          {t("common.tabs.prompts")}
         </TabLink>
         <TabLink href={`/u/${user.username}?tab=favorites`} active={tab === "favorites"}>
-          Favorites
+          {t("common.tabs.favorites")}
         </TabLink>
       </nav>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.015] p-16 text-center text-sm text-muted-foreground">
-          {tab === "favorites" ? "No favorites yet." : "No prompts yet."}
+        <div className="rounded-2xl border border-dashed border-border bg-tint-1 p-16 text-center text-sm text-muted-foreground">
+          {tab === "favorites" ? t("common.empty.noFavorites") : t("common.empty.noPrompts")}
         </div>
       ) : (
         <PromptMasonry>

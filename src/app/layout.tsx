@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/dictionaries";
+import type { Theme } from "@/lib/theme/provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,19 +30,27 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get("pm-theme")?.value;
+  const localeCookie = cookieStore.get("pm-locale")?.value;
+  const initialTheme: Theme = themeCookie === "light" ? "light" : "dark";
+  const initialLocale: Locale = localeCookie === "tr" ? "tr" : DEFAULT_LOCALE;
+
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      lang={initialLocale}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased ${
+        initialTheme === "dark" ? "dark" : ""
+      }`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans">
-        <Providers>
+        <Providers initialTheme={initialTheme} initialLocale={initialLocale}>
           <Navbar />
           <main className="flex-1">{children}</main>
           <Footer />

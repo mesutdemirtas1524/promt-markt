@@ -20,6 +20,7 @@ import { Loader2, Lock, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
+import { useT } from "@/lib/i18n/provider";
 
 type Props = {
   promptId: string;
@@ -38,6 +39,7 @@ export function PromptDetailActions(props: Props) {
   const { dbUser } = useCurrentUser();
   const { usd } = useSolPrice();
   const router = useRouter();
+  const { t } = useT();
 
   const priceUsd = solToUsdString(props.priceSol, usd);
 
@@ -200,7 +202,7 @@ export function PromptDetailActions(props: Props) {
   function copyPrompt() {
     if (!props.promptText) return;
     navigator.clipboard.writeText(props.promptText);
-    toast.success("Copied to clipboard.");
+    toast.success(t("detail.copied"));
   }
 
   return (
@@ -208,11 +210,11 @@ export function PromptDetailActions(props: Props) {
       <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
         <div className="flex items-center justify-between border-b border-white/[0.05] px-4 py-2.5">
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            Prompt
+            {t("detail.prompt")}
           </span>
           {props.hasAccess && props.promptText && (
             <Button size="sm" variant="ghost" onClick={copyPrompt} className="h-7 px-2 text-xs">
-              Copy
+              {t("detail.copy")}
             </Button>
           )}
         </div>
@@ -229,8 +231,8 @@ export function PromptDetailActions(props: Props) {
               <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/55 px-3.5 py-1.5 text-xs backdrop-blur">
                 <Lock className="h-3.5 w-3.5" />
                 {props.priceSol === 0
-                  ? "Sign in to unlock"
-                  : `Unlock for ${formatSol(props.priceSol)} SOL${priceUsd ? ` · ${priceUsd}` : ""}`}
+                  ? t("detail.signInToUnlock")
+                  : `${t("detail.unlockFor")} ${formatSol(props.priceSol)} SOL${priceUsd ? ` · ${priceUsd}` : ""}`}
               </div>
             </div>
           </div>
@@ -248,13 +250,13 @@ export function PromptDetailActions(props: Props) {
           {buying ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Processing…
+              {t("detail.processing")}
             </>
           ) : props.priceSol === 0 ? (
-            "Unlock for free"
+            t("detail.unlockFree")
           ) : (
             <>
-              Buy for {formatSol(props.priceSol)} SOL
+              {t("detail.buyFor")} {formatSol(props.priceSol)} SOL
               {priceUsd && <span className="opacity-70">· {priceUsd}</span>}
             </>
           )}
@@ -262,19 +264,19 @@ export function PromptDetailActions(props: Props) {
       )}
 
       {props.isOwnPrompt && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-[11px] text-muted-foreground">
-          This is your prompt. Buyers see the prompt text only after purchasing.
+        <div className="rounded-xl border border-border bg-tint-1 p-3 text-[11px] text-muted-foreground">
+          {t("detail.ownPrompt")}
         </div>
       )}
 
       {props.hasAccess && !props.isOwnPrompt && props.priceSol > 0 && (
-        <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+        <div className="rounded-xl border border-border bg-tint-1 p-4">
           <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             <Star className="h-3.5 w-3.5" />
-            {localRating ? "Your rating" : "Rate this prompt"}
+            {localRating ? t("detail.yourRating") : t("detail.rateThis")}
           </div>
           <RatingStars value={localRating} onChange={handleRate} readOnly={submittingRating} />
-          <p className="mt-2 text-[11px] text-muted-foreground/80">You can change your rating anytime.</p>
+          <p className="mt-2 text-[11px] text-muted-foreground/80">{t("detail.ratingHint")}</p>
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { fetchPromptCards, fetchCategories, fetchPlatforms, fetchUserFavoriteIds } from "@/lib/queries";
 import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { getCurrentUser } from "@/lib/auth";
+import { getServerT } from "@/lib/i18n/server";
 import { ExploreSearchInput } from "./search-input";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export default async function ExplorePage({
   const price = sp.price ?? "all";
   const search = sp.q?.trim() ?? "";
 
+  const { t } = await getServerT();
   const viewer = await getCurrentUser();
   const [prompts, categories, platforms, favoriteIds] = await Promise.all([
     fetchPromptCards({
@@ -41,27 +43,25 @@ export default async function ExplorePage({
     <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Explore</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Discover prompts from creators across the network.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">{t("explore.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("explore.subtitle")}</p>
         </div>
-        <ExploreSearchInput initialValue={search} preserve={sp} />
+        <ExploreSearchInput initialValue={search} preserve={sp} placeholder={t("explore.search")} />
       </div>
 
       <div className="mb-3 flex flex-wrap gap-1.5">
-        <Chip href={buildHref(sp, { sort: "newest" })} active={sort === "newest"}>Newest</Chip>
-        <Chip href={buildHref(sp, { sort: "trending" })} active={sort === "trending"}>Trending</Chip>
-        <Chip href={buildHref(sp, { sort: "top" })} active={sort === "top"}>Top rated</Chip>
-        <span className="mx-2 my-auto h-5 w-px bg-white/[0.07]" />
-        <Chip href={buildHref(sp, { price: "all" })} active={price === "all"}>All</Chip>
-        <Chip href={buildHref(sp, { price: "free" })} active={price === "free"}>Free</Chip>
-        <Chip href={buildHref(sp, { price: "paid" })} active={price === "paid"}>Paid</Chip>
+        <Chip href={buildHref(sp, { sort: "newest" })} active={sort === "newest"}>{t("filter.newest")}</Chip>
+        <Chip href={buildHref(sp, { sort: "trending" })} active={sort === "trending"}>{t("filter.trending")}</Chip>
+        <Chip href={buildHref(sp, { sort: "top" })} active={sort === "top"}>{t("filter.topRated")}</Chip>
+        <span className="mx-2 my-auto h-5 w-px bg-border" />
+        <Chip href={buildHref(sp, { price: "all" })} active={price === "all"}>{t("filter.all")}</Chip>
+        <Chip href={buildHref(sp, { price: "free" })} active={price === "free"}>{t("filter.free")}</Chip>
+        <Chip href={buildHref(sp, { price: "paid" })} active={price === "paid"}>{t("filter.paid")}</Chip>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-1.5">
         <Chip href={buildHref(sp, { category: undefined })} active={!sp.category} size="sm">
-          All categories
+          {t("filter.allCategories")}
         </Chip>
         {categories.map((c) => (
           <Chip
@@ -77,17 +77,18 @@ export default async function ExplorePage({
 
       {search && (
         <p className="mb-5 text-xs text-muted-foreground">
-          {prompts.length} result{prompts.length === 1 ? "" : "s"} for{" "}
-          <span className="text-foreground">&ldquo;{search}&rdquo;</span> ·{" "}
+          {prompts.length}{" "}
+          {prompts.length === 1 ? t("explore.results.one") : t("explore.results.many")}{" "}
+          · <span className="text-foreground">&ldquo;{search}&rdquo;</span> ·{" "}
           <Link href={buildHref(sp, { q: undefined })} className="hover:text-foreground hover:underline underline-offset-2">
-            clear search
+            {t("explore.clearSearch")}
           </Link>
         </p>
       )}
 
       {prompts.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.015] p-16 text-center text-sm text-muted-foreground">
-          {search ? `No prompts match "${search}".` : "No prompts match these filters."}
+        <div className="rounded-2xl border border-dashed border-border bg-tint-1 p-16 text-center text-sm text-muted-foreground">
+          {search ? `${t("explore.empty.search")} "${search}".` : t("explore.empty.filters")}
         </div>
       ) : (
         <PromptMasonry>
@@ -98,7 +99,7 @@ export default async function ExplorePage({
       )}
 
       <div className="mt-12 text-[11px] uppercase tracking-wider text-muted-foreground/70">
-        Supported platforms · {platforms.map((p) => p.name).join(" · ")}
+        {t("explore.supported")} · {platforms.map((p) => p.name).join(" · ")}
       </div>
     </div>
   );
@@ -120,8 +121,8 @@ function Chip({
       href={href}
       className={
         (active
-          ? "border-white/[0.18] bg-white text-background "
-          : "border-white/[0.07] bg-white/[0.02] text-muted-foreground hover:border-white/15 hover:bg-white/[0.05] hover:text-foreground ") +
+          ? "border-foreground bg-foreground text-background "
+          : "border-border bg-tint-1 text-muted-foreground hover:bg-tint-2 hover:text-foreground ") +
         (size === "sm"
           ? "inline-flex h-7 items-center rounded-full border px-3 text-[11px] tracking-tight transition-all "
           : "inline-flex h-8 items-center rounded-full border px-3.5 text-xs font-medium tracking-tight transition-all ")
