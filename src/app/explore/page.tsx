@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { fetchPromptCards, fetchCategories, fetchPlatforms, fetchUserFavoriteIds } from "@/lib/queries";
-import { PromptCard } from "@/components/prompt-card";
+import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { getCurrentUser } from "@/lib/auth";
 import { ExploreSearchInput } from "./search-input";
 
@@ -30,7 +30,7 @@ export default async function ExplorePage({
       priceFilter: price,
       categorySlug: sp.category,
       search: search || undefined,
-      limit: 48,
+      limit: 96,
     }),
     fetchCategories(),
     fetchPlatforms(),
@@ -38,8 +38,8 @@ export default async function ExplorePage({
   ]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Explore</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -49,41 +49,29 @@ export default async function ExplorePage({
         <ExploreSearchInput initialValue={search} preserve={sp} />
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        <FilterPill href={buildHref(sp, { sort: "newest" })} active={sort === "newest"}>
-          Newest
-        </FilterPill>
-        <FilterPill href={buildHref(sp, { sort: "trending" })} active={sort === "trending"}>
-          Trending
-        </FilterPill>
-        <FilterPill href={buildHref(sp, { sort: "top" })} active={sort === "top"}>
-          Top rated
-        </FilterPill>
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        <Chip href={buildHref(sp, { sort: "newest" })} active={sort === "newest"}>Newest</Chip>
+        <Chip href={buildHref(sp, { sort: "trending" })} active={sort === "trending"}>Trending</Chip>
+        <Chip href={buildHref(sp, { sort: "top" })} active={sort === "top"}>Top rated</Chip>
         <span className="mx-2 my-auto h-5 w-px bg-white/[0.07]" />
-        <FilterPill href={buildHref(sp, { price: "all" })} active={price === "all"}>
-          All
-        </FilterPill>
-        <FilterPill href={buildHref(sp, { price: "free" })} active={price === "free"}>
-          Free
-        </FilterPill>
-        <FilterPill href={buildHref(sp, { price: "paid" })} active={price === "paid"}>
-          Paid
-        </FilterPill>
+        <Chip href={buildHref(sp, { price: "all" })} active={price === "all"}>All</Chip>
+        <Chip href={buildHref(sp, { price: "free" })} active={price === "free"}>Free</Chip>
+        <Chip href={buildHref(sp, { price: "paid" })} active={price === "paid"}>Paid</Chip>
       </div>
 
-      <div className="mb-8 flex flex-wrap gap-1.5">
-        <FilterPill href={buildHref(sp, { category: undefined })} active={!sp.category} size="sm">
+      <div className="mb-6 flex flex-wrap gap-1.5">
+        <Chip href={buildHref(sp, { category: undefined })} active={!sp.category} size="sm">
           All categories
-        </FilterPill>
+        </Chip>
         {categories.map((c) => (
-          <FilterPill
+          <Chip
             key={c.id}
             href={buildHref(sp, { category: c.slug })}
             active={sp.category === c.slug}
             size="sm"
           >
             {c.name}
-          </FilterPill>
+          </Chip>
         ))}
       </div>
 
@@ -91,7 +79,7 @@ export default async function ExplorePage({
         <p className="mb-5 text-xs text-muted-foreground">
           {prompts.length} result{prompts.length === 1 ? "" : "s"} for{" "}
           <span className="text-foreground">&ldquo;{search}&rdquo;</span> ·{" "}
-          <Link href={buildHref(sp, { q: undefined })} className="underline-offset-2 hover:underline hover:text-foreground">
+          <Link href={buildHref(sp, { q: undefined })} className="hover:text-foreground hover:underline underline-offset-2">
             clear search
           </Link>
         </p>
@@ -102,21 +90,21 @@ export default async function ExplorePage({
           {search ? `No prompts match "${search}".` : "No prompts match these filters."}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <PromptMasonry>
           {prompts.map((p) => (
             <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
           ))}
-        </div>
+        </PromptMasonry>
       )}
 
-      <div className="mt-16 text-[11px] uppercase tracking-wider text-muted-foreground/70">
+      <div className="mt-12 text-[11px] uppercase tracking-wider text-muted-foreground/70">
         Supported platforms · {platforms.map((p) => p.name).join(" · ")}
       </div>
     </div>
   );
 }
 
-function FilterPill({
+function Chip({
   href,
   active,
   size = "default",

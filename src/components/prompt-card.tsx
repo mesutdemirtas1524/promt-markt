@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Badge } from "./ui/badge";
 import { PriceTag } from "./price-tag";
 import { Star, Heart } from "lucide-react";
@@ -26,24 +25,27 @@ export function PromptCard({
 }) {
   const isRemoved = prompt.status === "removed";
   return (
-    <div className="gradient-border group relative overflow-hidden rounded-xl border border-border bg-card ring-hover">
+    <div className="gradient-border ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
       <Link href={`/prompt/${prompt.id}`} className="block">
-        <div className="relative aspect-square w-full overflow-hidden bg-muted">
+        <div className="relative w-full overflow-hidden bg-muted">
           {prompt.cover_image ? (
-            <Image
+            // Native aspect-ratio: lets browser size the image so nothing is cropped
+            // Plain <img> here is intentional — masonry needs intrinsic height before paint
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={prompt.cover_image}
               alt={prompt.title}
-              fill
-              sizes="(max-width: 768px) 50vw, 25vw"
-              className="object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.04]"
+              loading="lazy"
+              decoding="async"
+              className="block h-auto w-full transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+            <div className="flex aspect-square w-full items-center justify-center text-xs text-muted-foreground">
               No image
             </div>
           )}
-          {/* Bottom gradient for legibility of any overlay text */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          {/* Bottom gradient — only on hover, fades over title area */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/65 via-black/15 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
           <div className="absolute right-2 top-2 flex flex-col items-end gap-1.5">
             <div className="rounded-full border border-white/10 bg-black/55 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums backdrop-blur">
@@ -52,8 +54,9 @@ export function PromptCard({
             {isRemoved && <Badge variant="destructive">Removed</Badge>}
           </div>
         </div>
-        <div className="space-y-1.5 p-3.5">
-          <h3 className="line-clamp-1 text-[13.5px] font-medium leading-tight text-foreground">
+
+        <div className="space-y-1.5 p-3">
+          <h3 className="line-clamp-1 text-[13px] font-medium leading-tight text-foreground">
             {prompt.title}
           </h3>
           <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
@@ -65,19 +68,18 @@ export function PromptCard({
                   {prompt.favorite_count}
                 </span>
               )}
-              {prompt.rating_count > 0 && prompt.avg_rating !== null ? (
+              {prompt.rating_count > 0 && prompt.avg_rating !== null && (
                 <span className="flex items-center gap-1 tabular-nums">
                   <Star className="h-3 w-3 fill-amber-300 text-amber-300" />
                   {Math.round(prompt.avg_rating)}
-                  <span className="opacity-60">({prompt.rating_count})</span>
                 </span>
-              ) : (
-                <span className="opacity-50">No ratings</span>
               )}
             </div>
           </div>
         </div>
       </Link>
+
+      {/* Hover-revealed favorite toggle */}
       <div className="absolute left-2 top-2 z-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-within:opacity-100">
         <FavoriteButton
           promptId={prompt.id}
@@ -85,13 +87,23 @@ export function PromptCard({
           size="sm"
         />
       </div>
+
       {initiallyFavorited && (
-        <div className="absolute left-2 top-2 z-[5] pointer-events-none group-hover:opacity-0 transition-opacity duration-200">
+        <div className="absolute left-2 top-2 z-[5] pointer-events-none transition-opacity duration-200 group-hover:opacity-0">
           <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-pink-400 backdrop-blur">
             <Heart className="h-3.5 w-3.5 fill-current" />
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Wrap a list of PromptCards in a CSS-columns masonry layout. */
+export function PromptMasonry({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="columns-2 gap-3 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 [&>*]:mb-3">
+      {children}
     </div>
   );
 }

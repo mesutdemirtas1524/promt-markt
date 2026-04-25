@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { fetchUserFavoriteIds } from "@/lib/queries";
-import { PromptCard, type PromptCardData } from "@/components/prompt-card";
+import { PromptCard, PromptMasonry, type PromptCardData } from "@/components/prompt-card";
 
 export default async function MyPurchasesPage() {
   const user = await getCurrentUser();
@@ -51,11 +51,11 @@ export default async function MyPurchasesPage() {
           Prompts you purchase or unlock will appear here.
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+        <PromptMasonry>
           {cards.map((p) => (
             <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
           ))}
-        </div>
+        </PromptMasonry>
       )}
     </div>
   );

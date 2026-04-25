@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { PromptDetailActions } from "@/components/prompt-detail-actions";
 import { FavoriteButton } from "@/components/favorite-button";
 import { OwnerActions } from "@/components/owner-actions";
+import { PromptGallery } from "@/components/image-lightbox";
 import { formatRating, formatRelativeTime } from "@/lib/utils";
 import { Pencil, Star, Heart, ShoppingBag } from "lucide-react";
 
@@ -37,23 +38,9 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
 
       <div className="grid gap-8 lg:grid-cols-5">
         {/* Gallery */}
-        <div className="space-y-3 lg:col-span-3">
+        <div className="lg:col-span-3">
           {prompt.images.length > 0 ? (
-            prompt.images.map((img: { id: string; image_url: string; position: number }) => (
-              <div
-                key={img.id}
-                className="relative aspect-square w-full overflow-hidden rounded-2xl border border-white/[0.07] bg-muted"
-              >
-                <Image
-                  src={img.image_url}
-                  alt={prompt.title}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 60vw"
-                  className="object-cover"
-                  priority={img.position === 1}
-                />
-              </div>
-            ))
+            <PromptGallery images={prompt.images} alt={prompt.title} />
           ) : (
             <div className="aspect-square w-full rounded-2xl border border-dashed border-white/[0.08] bg-muted" />
           )}

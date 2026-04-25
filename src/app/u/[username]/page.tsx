@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { fetchPromptCards, fetchUserFavoriteIds, fetchFavoritedPrompts } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
-import { PromptCard } from "@/components/prompt-card";
+import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { shortAddress } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -94,11 +94,11 @@ export default async function UserProfilePage({
           {tab === "favorites" ? "No favorites yet." : "No prompts yet."}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <PromptMasonry>
           {items.map((p) => (
             <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
           ))}
-        </div>
+        </PromptMasonry>
       )}
     </div>
   );
