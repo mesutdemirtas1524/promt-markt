@@ -9,7 +9,6 @@ export default async function MyFavoritesPage() {
   const { t } = await getServerT();
 
   const prompts = await fetchFavoritedPrompts(user.id, 60);
-  const favoriteIds = new Set(prompts.map((p) => p.id));
 
   return (
     <div>
@@ -21,7 +20,7 @@ export default async function MyFavoritesPage() {
       ) : (
         <PromptMasonry>
           {prompts.map((p) => (
-            <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
+            <PromptCard key={p.id} prompt={p} />
           ))}
         </PromptMasonry>
       )}

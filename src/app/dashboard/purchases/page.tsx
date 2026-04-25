@@ -1,7 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { getServerT } from "@/lib/i18n/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import { fetchUserFavoriteIds } from "@/lib/queries";
 import { PromptCard, PromptMasonry, type PromptCardData } from "@/components/prompt-card";
 
 export default async function MyPurchasesPage() {
@@ -43,8 +42,6 @@ export default async function MyPurchasesPage() {
     };
   });
 
-  const favoriteIds = await fetchUserFavoriteIds(user.id);
-
   return (
     <div>
       <h2 className="mb-6 text-lg font-semibold tracking-tight">{t("dashboard.myLibrary")}</h2>
@@ -55,7 +52,7 @@ export default async function MyPurchasesPage() {
       ) : (
         <PromptMasonry>
           {cards.map((p) => (
-            <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
+            <PromptCard key={p.id} prompt={p} />
           ))}
         </PromptMasonry>
       )}

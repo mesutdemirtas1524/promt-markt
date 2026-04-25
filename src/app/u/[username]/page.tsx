@@ -3,8 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import { fetchPromptCards, fetchUserFavoriteIds, fetchFavoritedPrompts } from "@/lib/queries";
-import { getCurrentUser } from "@/lib/auth";
+import { fetchPromptCards, fetchFavoritedPrompts } from "@/lib/queries";
 import { getServerT } from "@/lib/i18n/server";
 import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { shortAddress } from "@/lib/utils";
@@ -66,13 +65,11 @@ export default async function UserProfilePage({
   if (!user) notFound();
 
   const { t } = await getServerT();
-  const viewer = await getCurrentUser();
-  const [prompts, favorites, favoriteIds] = await Promise.all([
+  const [prompts, favorites] = await Promise.all([
     tab === "prompts"
       ? fetchPromptCards({ creatorId: user.id, orderBy: "newest", limit: 48 })
       : Promise.resolve([]),
     tab === "favorites" ? fetchFavoritedPrompts(user.id, 48) : Promise.resolve([]),
-    viewer ? fetchUserFavoriteIds(viewer.id) : Promise.resolve(new Set<string>()),
   ]);
 
   const items = tab === "favorites" ? favorites : prompts;
@@ -132,7 +129,7 @@ export default async function UserProfilePage({
       ) : (
         <PromptMasonry>
           {items.map((p) => (
-            <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
+            <PromptCard key={p.id} prompt={p} />
           ))}
         </PromptMasonry>
       )}

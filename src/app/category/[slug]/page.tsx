@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import { fetchPromptCards, fetchUserFavoriteIds } from "@/lib/queries";
-import { getCurrentUser } from "@/lib/auth";
+import { fetchPromptCards } from "@/lib/queries";
 import { PromptCard } from "@/components/prompt-card";
 
 export const dynamic = "force-dynamic";
@@ -32,11 +31,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   const { data: cat } = await supabase.from("categories").select("*").eq("slug", slug).maybeSingle();
   if (!cat) notFound();
 
-  const viewer = await getCurrentUser();
-  const [prompts, favoriteIds] = await Promise.all([
-    fetchPromptCards({ categorySlug: slug, orderBy: "newest", limit: 48 }),
-    viewer ? fetchUserFavoriteIds(viewer.id) : Promise.resolve(new Set<string>()),
-  ]);
+  const prompts = await fetchPromptCards({ categorySlug: slug, orderBy: "newest", limit: 48 });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -49,7 +44,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {prompts.map((p) => (
-            <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
+            <PromptCard key={p.id} prompt={p} />
           ))}
         </div>
       )}

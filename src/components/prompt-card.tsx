@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { Badge } from "./ui/badge";
 import { PriceTag } from "./price-tag";
 import { Star, Heart } from "lucide-react";
 import { FavoriteButton } from "./favorite-button";
+import { useFavorites } from "@/hooks/use-favorites";
 
 export type PromptCardData = {
   id: string;
@@ -16,21 +19,15 @@ export type PromptCardData = {
   status?: "active" | "removed";
 };
 
-export function PromptCard({
-  prompt,
-  initiallyFavorited = false,
-}: {
-  prompt: PromptCardData;
-  initiallyFavorited?: boolean;
-}) {
+export function PromptCard({ prompt }: { prompt: PromptCardData }) {
+  const { isFavorited } = useFavorites();
+  const favorited = isFavorited(prompt.id);
   const isRemoved = prompt.status === "removed";
   return (
     <div className="gradient-border ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
       <Link href={`/prompt/${prompt.id}`} className="block">
         <div className="relative w-full overflow-hidden bg-muted">
           {prompt.cover_image ? (
-            // Native aspect-ratio: lets browser size the image so nothing is cropped
-            // Plain <img> here is intentional — masonry needs intrinsic height before paint
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={prompt.cover_image}
@@ -44,7 +41,6 @@ export function PromptCard({
               No image
             </div>
           )}
-          {/* Bottom gradient — only on hover, fades over title area */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/65 via-black/15 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
           <div className="absolute right-2 top-2 flex flex-col items-end gap-1.5">
@@ -81,14 +77,10 @@ export function PromptCard({
 
       {/* Hover-revealed favorite toggle */}
       <div className="absolute left-2 top-2 z-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-within:opacity-100">
-        <FavoriteButton
-          promptId={prompt.id}
-          initiallyFavorited={initiallyFavorited}
-          size="sm"
-        />
+        <FavoriteButton promptId={prompt.id} size="sm" />
       </div>
 
-      {initiallyFavorited && (
+      {favorited && (
         <div className="absolute left-2 top-2 z-[5] pointer-events-none transition-opacity duration-200 group-hover:opacity-0">
           <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-pink-400 backdrop-blur">
             <Heart className="h-3.5 w-3.5 fill-current" />

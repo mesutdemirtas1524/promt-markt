@@ -5,6 +5,7 @@ import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { Toaster } from "sonner";
 import { CurrentUserProvider } from "@/hooks/use-current-user";
 import { SolPriceProvider } from "@/hooks/use-sol-price";
+import { FavoritesProvider } from "@/hooks/use-favorites";
 import { ThemeProvider, type Theme } from "@/lib/theme/provider";
 import { LocaleProvider } from "@/lib/i18n/provider";
 import type { Locale } from "@/lib/i18n/dictionaries";
@@ -60,10 +61,12 @@ export function Providers({
       }}
     >
       <CurrentUserProvider>
-        <SolPriceProvider>
-          {children}
-          <Toaster position="bottom-right" />
-        </SolPriceProvider>
+        <FavoritesProvider>
+          <SolPriceProvider>
+            {children}
+            <Toaster position="bottom-right" />
+          </SolPriceProvider>
+        </FavoritesProvider>
       </CurrentUserProvider>
     </PrivyProvider>
     </LocaleProvider>

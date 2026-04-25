@@ -6,10 +6,10 @@ import { toast } from "sonner";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/provider";
+import { useFavorites } from "@/hooks/use-favorites";
 
 type Props = {
   promptId: string;
-  initiallyFavorited: boolean;
   size?: "sm" | "md";
   showLabel?: boolean;
   initialCount?: number;
@@ -18,7 +18,6 @@ type Props = {
 
 export function FavoriteButton({
   promptId,
-  initiallyFavorited,
   size = "md",
   showLabel = false,
   initialCount,
@@ -26,7 +25,8 @@ export function FavoriteButton({
 }: Props) {
   const { authenticated, login, getAccessToken } = usePrivy();
   const { t } = useT();
-  const [favorited, setFavorited] = useState(initiallyFavorited);
+  const { isFavorited, markFavorited, markUnfavorited } = useFavorites();
+  const favorited = isFavorited(promptId);
   const [count, setCount] = useState(initialCount ?? 0);
   const [busy, setBusy] = useState(false);
 
@@ -42,7 +42,8 @@ export function FavoriteButton({
 
     const wasFavorited = favorited;
     const optimistic = !wasFavorited;
-    setFavorited(optimistic);
+    if (optimistic) markFavorited(promptId);
+    else markUnfavorited(promptId);
     const optimisticCount = count + (optimistic ? 1 : -1);
     setCount(optimisticCount);
     onCountChange?.(optimisticCount);
@@ -56,7 +57,9 @@ export function FavoriteButton({
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Failed");
     } catch (err) {
-      setFavorited(wasFavorited);
+      // Revert
+      if (wasFavorited) markFavorited(promptId);
+      else markUnfavorited(promptId);
       setCount(count);
       onCountChange?.(count);
       toast.error((err as Error).message);

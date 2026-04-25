@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { fetchPromptCards, fetchCategories, fetchPlatforms, fetchUserFavoriteIds } from "@/lib/queries";
+import { fetchPromptCards, fetchCategories, fetchPlatforms } from "@/lib/queries";
 import { PromptCard, PromptMasonry } from "@/components/prompt-card";
-import { getCurrentUser } from "@/lib/auth";
 import { getServerT } from "@/lib/i18n/server";
 import { ExploreSearchInput } from "./search-input";
 
@@ -25,8 +24,7 @@ export default async function ExplorePage({
   const search = sp.q?.trim() ?? "";
 
   const { t } = await getServerT();
-  const viewer = await getCurrentUser();
-  const [prompts, categories, platforms, favoriteIds] = await Promise.all([
+  const [prompts, categories, platforms] = await Promise.all([
     fetchPromptCards({
       orderBy: sort,
       priceFilter: price,
@@ -36,7 +34,6 @@ export default async function ExplorePage({
     }),
     fetchCategories(),
     fetchPlatforms(),
-    viewer ? fetchUserFavoriteIds(viewer.id) : Promise.resolve(new Set<string>()),
   ]);
 
   return (
@@ -93,7 +90,7 @@ export default async function ExplorePage({
       ) : (
         <PromptMasonry>
           {prompts.map((p) => (
-            <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
+            <PromptCard key={p.id} prompt={p} />
           ))}
         </PromptMasonry>
       )}

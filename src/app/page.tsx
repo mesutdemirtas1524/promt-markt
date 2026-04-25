@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { fetchPromptCards, fetchCategories, fetchUserFavoriteIds } from "@/lib/queries";
-import { getCurrentUser } from "@/lib/auth";
+import { fetchPromptCards, fetchCategories } from "@/lib/queries";
 import { getServerT } from "@/lib/i18n/server";
 import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 
-// Per-user favorite overlay on every card prevents safe ISR — see note in
-// /explore. Switch to client-side favorite hydration (own context fetched
-// on mount) before enabling ISR.
+// Stays dynamic because getServerT() reads the locale cookie. To enable
+// ISR here we'd need to either move locale to a route segment ([locale]/)
+// or accept English-only server render and hydrate locale on the client.
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
@@ -26,11 +25,9 @@ export default async function HomePage({
   const price = sp.price ?? "all";
 
   const { t } = await getServerT();
-  const viewer = await getCurrentUser();
-  const [prompts, categories, favoriteIds] = await Promise.all([
+  const [prompts, categories] = await Promise.all([
     fetchPromptCards({ orderBy: sort, priceFilter: price, limit: 60 }),
     fetchCategories(),
-    viewer ? fetchUserFavoriteIds(viewer.id) : Promise.resolve(new Set<string>()),
   ]);
 
   return (
@@ -99,7 +96,7 @@ export default async function HomePage({
       ) : (
         <PromptMasonry>
           {prompts.map((p) => (
-            <PromptCard key={p.id} prompt={p} initiallyFavorited={favoriteIds.has(p.id)} />
+            <PromptCard key={p.id} prompt={p} />
           ))}
         </PromptMasonry>
       )}

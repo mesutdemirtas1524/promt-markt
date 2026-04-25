@@ -76,7 +76,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
   if (!result) notFound();
   const { t } = await getServerT();
 
-  const { prompt, hasAccess, myRating, isOwnPrompt, isFavorited } = result;
+  const { prompt, hasAccess, myRating, isOwnPrompt } = result;
   const isRemoved = prompt.status === "removed";
 
   return (
@@ -168,7 +168,6 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
           {!isOwnPrompt && (
             <FavoriteButton
               promptId={prompt.id}
-              initiallyFavorited={isFavorited}
               size="md"
               showLabel
               initialCount={prompt.favorite_count ?? 0}
