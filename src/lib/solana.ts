@@ -4,8 +4,46 @@ import {
   SystemProgram,
   Transaction,
   LAMPORTS_PER_SOL,
+  Keypair,
 } from "@solana/web3.js";
 import { PLATFORM_FEE_BPS, PLATFORM_WALLET, SOLANA_RPC_URL } from "./constants";
+
+/**
+ * Generate a fresh, throwaway pubkey to use as a Solana Pay-style "reference"
+ * on a checkout. The secret half is discarded — we only need the public part
+ * recorded on-chain so the server can later locate the tx via
+ * `getSignaturesForAddress(reference)`.
+ */
+export function generatePurchaseReference(): string {
+  return Keypair.generate().publicKey.toBase58();
+}
+
+/**
+ * Discover a tx that includes the given `reference` pubkey. Polls a few
+ * times because public RPCs are eventually consistent.
+ *
+ * Returns the signature of the first matching tx, or null if not found.
+ */
+export async function findReferenceSignature(
+  reference: string,
+  opts: { maxAttempts?: number; intervalMs?: number } = {}
+): Promise<string | null> {
+  const connection = getSolanaConnection();
+  const referenceKey = new PublicKey(reference);
+  const maxAttempts = opts.maxAttempts ?? 15;
+  const intervalMs = opts.intervalMs ?? 3_000;
+
+  for (let i = 0; i < maxAttempts; i++) {
+    const sigs = await connection.getSignaturesForAddress(
+      referenceKey,
+      { limit: 1 },
+      "confirmed"
+    );
+    if (sigs.length > 0) return sigs[0].signature;
+    if (i < maxAttempts - 1) await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return null;
+}
 
 export function getSolanaConnection() {
   return new Connection(SOLANA_RPC_URL, "confirmed");

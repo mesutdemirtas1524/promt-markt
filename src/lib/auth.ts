@@ -1,17 +1,40 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { PrivyClient } from "@privy-io/server-auth";
+import { createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
+import {
+  verifyAccessToken,
+  verifyIdentityToken,
+  type VerifyAccessTokenResponse,
+} from "@privy-io/node";
 import { createSupabaseServiceClient } from "./supabase/server";
 import type { User } from "./supabase/types";
 
-const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-const privyAppSecret = process.env.PRIVY_APP_SECRET;
+const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+const PRIVY_VERIFICATION_KEY = process.env.PRIVY_VERIFICATION_KEY; // optional SPKI string from dashboard
 
-let privyClient: PrivyClient | null = null;
-function getPrivy(): PrivyClient | null {
-  if (!privyAppId || !privyAppSecret) return null;
-  if (!privyClient) privyClient = new PrivyClient(privyAppId, privyAppSecret);
-  return privyClient;
+// JWKS endpoint — Privy publishes the verification key set per app here.
+let jwksGetKey: JWTVerifyGetKey | null = null;
+function getVerificationKey(): string | JWTVerifyGetKey | null {
+  if (!PRIVY_APP_ID) return null;
+  if (PRIVY_VERIFICATION_KEY) return PRIVY_VERIFICATION_KEY;
+  if (!jwksGetKey) {
+    jwksGetKey = createRemoteJWKSet(
+      new URL(`https://auth.privy.io/api/v1/apps/${PRIVY_APP_ID}/jwks.json`)
+    );
+  }
+  return jwksGetKey;
+}
+
+/**
+ * Reject tokens that have expired. `verifyAccessToken` already throws on `exp`
+ * via the underlying jose library, but we keep an explicit check here as
+ * defense-in-depth in case the library upgrades silently change behavior.
+ */
+function assertNotExpired(payload: VerifyAccessTokenResponse) {
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (typeof payload.expiration === "number" && payload.expiration < nowSec) {
+    throw new Error("Token expired");
+  }
 }
 
 /**
@@ -20,28 +43,45 @@ function getPrivy(): PrivyClient | null {
  * or if Privy isn't configured).
  */
 export async function getCurrentUser(): Promise<User | null> {
-  const privy = getPrivy();
-  if (!privy) return null;
+  const appId = PRIVY_APP_ID;
+  const verificationKey = getVerificationKey();
+  if (!appId || !verificationKey) return null;
 
   const cookieStore = await cookies();
-  const idToken =
-    cookieStore.get("privy-id-token")?.value ??
-    cookieStore.get("privy-token")?.value ??
-    null;
-  if (!idToken) return null;
+  const idToken = cookieStore.get("privy-id-token")?.value ?? null;
+  const accessToken = cookieStore.get("privy-token")?.value ?? null;
 
   let privyId: string | null = null;
-  try {
-    const user = await privy.getUser({ idToken });
-    privyId = user.id;
-  } catch {
+
+  // Identity token → user object (preferred when available)
+  if (idToken) {
     try {
-      const verified = await privy.verifyAuthToken(idToken);
-      privyId = verified.userId;
+      const user = await verifyIdentityToken({
+        identity_token: idToken,
+        app_id: appId,
+        verification_key: verificationKey,
+      });
+      privyId = user.id;
     } catch {
-      return null;
+      privyId = null;
     }
   }
+
+  // Fall back to access token if identity token is missing/invalid
+  if (!privyId && accessToken) {
+    try {
+      const payload = await verifyAccessToken({
+        access_token: accessToken,
+        app_id: appId,
+        verification_key: verificationKey,
+      });
+      assertNotExpired(payload);
+      privyId = payload.user_id;
+    } catch {
+      privyId = null;
+    }
+  }
+
   if (!privyId) return null;
 
   const supabase = createSupabaseServiceClient();
@@ -51,14 +91,20 @@ export async function getCurrentUser(): Promise<User | null> {
 
 /**
  * Verify a Privy access token from an Authorization: Bearer header.
- * Returns the Privy user ID, or null if invalid.
+ * Returns the Privy user ID, or null if invalid/expired.
  */
 export async function verifyPrivyToken(token: string): Promise<string | null> {
-  const privy = getPrivy();
-  if (!privy) return null;
+  const appId = PRIVY_APP_ID;
+  const verificationKey = getVerificationKey();
+  if (!appId || !verificationKey) return null;
   try {
-    const verified = await privy.verifyAuthToken(token);
-    return verified.userId;
+    const payload = await verifyAccessToken({
+      access_token: token,
+      app_id: appId,
+      verification_key: verificationKey,
+    });
+    assertNotExpired(payload);
+    return payload.user_id;
   } catch {
     return null;
   }

@@ -8,13 +8,7 @@ import { RatingStars } from "./rating-stars";
 import { toast } from "sonner";
 import { PublicKey, SystemProgram, Transaction, Connection } from "@solana/web3.js";
 import bs58 from "bs58";
-import {
-  PLATFORM_FEE_BPS,
-  PLATFORM_WALLET,
-  SOLANA_RPC_URL,
-  SOLANA_NETWORK,
-  LAMPORTS_PER_SOL,
-} from "@/lib/constants";
+import { SOLANA_RPC_URL, SOLANA_NETWORK } from "@/lib/constants";
 import { formatSol } from "@/lib/utils";
 import { Loader2, Lock, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -49,24 +43,47 @@ export function PromptDetailActions(props: Props) {
 
   const buyerWallet = wallets[0];
 
-  const pendingKey = `pending-tx-${props.promptId}`;
+  // Per-prompt pending checkout (reference + sig if signed). If the user
+  // closes the tab mid-flow the next attempt will resume rather than re-pay.
+  const pendingKey = `pending-checkout-${props.promptId}`;
+  type Pending = { reference: string; signature?: string };
 
-  async function claimSignature(signature: string): Promise<boolean> {
+  function readPending(): Pending | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(pendingKey);
+      return raw ? (JSON.parse(raw) as Pending) : null;
+    } catch {
+      return null;
+    }
+  }
+  function writePending(p: Pending) {
+    if (typeof window !== "undefined") localStorage.setItem(pendingKey, JSON.stringify(p));
+  }
+  function clearPending() {
+    if (typeof window !== "undefined") localStorage.removeItem(pendingKey);
+  }
+
+  async function confirmReference(reference: string, signature?: string): Promise<boolean> {
     const token = await getAccessToken();
     const res = await fetch("/api/prompts/purchase", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ prompt_id: props.promptId, tx_signature: signature }),
+      body: JSON.stringify({ reference, tx_signature: signature }),
     });
     if (res.ok) {
-      localStorage.removeItem(pendingKey);
+      clearPending();
       return true;
     }
     const data = await res.json().catch(() => ({}));
-    // Transient: tx not indexed yet — keep the pending record for retry
-    if (res.status >= 500 || /not found/i.test(data?.error ?? "")) return false;
-    // Permanent failure (wrong amount, not buyer, etc.) — forget it
-    localStorage.removeItem(pendingKey);
+    // Transient: tx not yet indexed — keep pending for retry
+    if (res.status === 404 && /not found/i.test(data?.error ?? "")) return false;
+    if (res.status === 410) {
+      // Intent expired — drop pending so a fresh checkout can run
+      clearPending();
+    } else {
+      clearPending();
+    }
     throw new Error(data?.error ?? "Verification failed");
   }
 
@@ -99,41 +116,80 @@ export function PromptDetailActions(props: Props) {
         return;
       }
 
-      // Recover a previously-submitted tx before creating a new one.
-      const pending = typeof window !== "undefined" ? localStorage.getItem(pendingKey) : null;
+      // 1. Resume an in-flight checkout if any
+      const pending = readPending();
       if (pending) {
         toast.info("Checking your previous transaction…");
-        const ok = await claimSignature(pending);
-        if (ok) {
-          toast.success("Previous purchase recovered — unlocked.");
-          router.refresh();
-          return;
+        try {
+          const ok = await confirmReference(pending.reference, pending.signature);
+          if (ok) {
+            toast.success("Previous purchase recovered — unlocked.");
+            router.refresh();
+            return;
+          }
+          toast.info("Previous tx still pending on-chain — retrying in a moment…");
+        } catch {
+          // expired or invalid — fall through to a new checkout
         }
-        toast.info("Previous tx still pending on-chain — retrying in a moment…");
       }
 
-      const connection = new Connection(SOLANA_RPC_URL, "confirmed");
-      const totalLamports = Math.round(props.priceSol * LAMPORTS_PER_SOL);
-      const platformLamports = Math.floor((totalLamports * PLATFORM_FEE_BPS) / 10_000);
-      const creatorLamports = totalLamports - platformLamports;
+      // 2. Ask the server to create a checkout intent (server is source of truth)
+      const token = await getAccessToken();
+      const checkoutRes = await fetch("/api/prompts/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          prompt_id: props.promptId,
+          buyer_wallet: buyerWallet.address,
+        }),
+      });
+      const checkout = await checkoutRes.json();
+      if (!checkoutRes.ok) throw new Error(checkout?.error ?? "Checkout failed");
+      if (checkout.alreadyPurchased) {
+        toast.success("You already own this prompt.");
+        router.refresh();
+        return;
+      }
+      const {
+        reference,
+        creator_wallet,
+        platform_wallet,
+        creator_lamports,
+        platform_lamports,
+      } = checkout as {
+        reference: string;
+        creator_wallet: string;
+        platform_wallet: string;
+        creator_lamports: number;
+        platform_lamports: number;
+      };
+      writePending({ reference });
 
+      // 3. Build the tx with two transfers + the reference attached as a
+      //    non-signer key on one of them (Solana Pay convention) so the
+      //    server can later discover the tx by querying the reference key.
+      const connection = new Connection(SOLANA_RPC_URL, "confirmed");
       const buyerPubkey = new PublicKey(buyerWallet.address);
+      const referenceKey = new PublicKey(reference);
+
+      const creatorIx = SystemProgram.transfer({
+        fromPubkey: buyerPubkey,
+        toPubkey: new PublicKey(creator_wallet),
+        lamports: creator_lamports,
+      });
+      const platformIx = SystemProgram.transfer({
+        fromPubkey: buyerPubkey,
+        toPubkey: new PublicKey(platform_wallet),
+        lamports: platform_lamports,
+      });
+      // Attach reference to the platform transfer; the System Program ignores
+      // extra read-only keys but the runtime records them on the tx so the
+      // server can find this tx via getSignaturesForAddress(reference).
+      platformIx.keys.push({ pubkey: referenceKey, isSigner: false, isWritable: false });
 
       const tx = new Transaction();
-      tx.add(
-        SystemProgram.transfer({
-          fromPubkey: buyerPubkey,
-          toPubkey: new PublicKey(props.creatorWallet),
-          lamports: creatorLamports,
-        })
-      );
-      tx.add(
-        SystemProgram.transfer({
-          fromPubkey: buyerPubkey,
-          toPubkey: new PublicKey(PLATFORM_WALLET),
-          lamports: platformLamports,
-        })
-      );
+      tx.add(creatorIx);
+      tx.add(platformIx);
       const { blockhash } = await connection.getLatestBlockhash();
       tx.recentBlockhash = blockhash;
       tx.feePayer = buyerPubkey;
@@ -152,12 +208,11 @@ export function PromptDetailActions(props: Props) {
         chain,
       });
       const signature = bs58.encode(result.signature);
-      // Persist immediately — even if the user closes the tab, the next click
-      // will try to claim this signature instead of charging them again.
-      localStorage.setItem(pendingKey, signature);
+      writePending({ reference, signature });
 
+      // 4. Tell the server about the signature for fast confirmation
       toast.info("Confirming on-chain…");
-      const ok = await claimSignature(signature);
+      const ok = await confirmReference(reference, signature);
       if (!ok) {
         toast.error(
           "Transaction sent but not yet indexed. Click Buy again in ~30s to recover it — you won't be charged twice."
