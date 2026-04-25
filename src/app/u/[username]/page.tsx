@@ -5,6 +5,8 @@ import { fetchPromptCards } from "@/lib/queries";
 import { PromptCard } from "@/components/prompt-card";
 import { shortAddress } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function UserProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
   const supabase = createSupabaseServiceClient();

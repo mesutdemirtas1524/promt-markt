@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { PromptDetailActions } from "@/components/prompt-detail-actions";
 import { formatRating, formatRelativeTime } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function PromptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const viewer = await getCurrentUser();

@@ -4,6 +4,8 @@ import { PromptCard } from "@/components/prompt-card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Coins, Star } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const [newest, trending, topRated, categories] = await Promise.all([
     fetchPromptCards({ orderBy: "newest", limit: 8 }),

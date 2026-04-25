@@ -2,6 +2,8 @@ import Link from "next/link";
 import { fetchPromptCards, fetchCategories, fetchPlatforms } from "@/lib/queries";
 import { PromptCard } from "@/components/prompt-card";
 
+export const dynamic = "force-dynamic";
+
 type SearchParams = {
   sort?: "newest" | "top" | "trending";
   price?: "free" | "paid" | "all";

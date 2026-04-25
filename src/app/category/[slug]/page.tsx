@@ -3,6 +3,8 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { fetchPromptCards } from "@/lib/queries";
 import { PromptCard } from "@/components/prompt-card";
 
+export const dynamic = "force-dynamic";
+
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const supabase = createSupabaseServiceClient();
