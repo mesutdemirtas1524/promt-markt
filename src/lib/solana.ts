@@ -9,6 +9,15 @@ import {
 import { PLATFORM_FEE_BPS, PLATFORM_WALLET, SOLANA_RPC_URL } from "./constants";
 
 /**
+ * Server-side RPC. Prefers HELIUS_RPC_URL (private, with API key) for
+ * higher rate limits, better latency, and webhook support. Falls back to
+ * the public RPC the client uses if no Helius URL is configured.
+ */
+function getServerRpcUrl(): string {
+  return process.env.HELIUS_RPC_URL || SOLANA_RPC_URL;
+}
+
+/**
  * Generate a fresh, throwaway pubkey to use as a Solana Pay-style "reference"
  * on a checkout. The secret half is discarded — we only need the public part
  * recorded on-chain so the server can later locate the tx via
@@ -30,8 +39,11 @@ export async function findReferenceSignature(
 ): Promise<string | null> {
   const connection = getSolanaConnection();
   const referenceKey = new PublicKey(reference);
-  const maxAttempts = opts.maxAttempts ?? 15;
-  const intervalMs = opts.intervalMs ?? 3_000;
+  // Defaults assume Helius webhook is also racing to confirm the tx; the
+  // polling here is a fallback for the few seconds before the webhook
+  // arrives. Caller can override for slower setups.
+  const maxAttempts = opts.maxAttempts ?? 8;
+  const intervalMs = opts.intervalMs ?? 2_000;
 
   for (let i = 0; i < maxAttempts; i++) {
     const sigs = await connection.getSignaturesForAddress(
@@ -46,7 +58,7 @@ export async function findReferenceSignature(
 }
 
 export function getSolanaConnection() {
-  return new Connection(SOLANA_RPC_URL, "confirmed");
+  return new Connection(getServerRpcUrl(), "confirmed");
 }
 
 export function solToLamports(sol: number): number {
@@ -118,8 +130,10 @@ export async function verifyPurchaseTransaction(params: {
 }): Promise<{ ok: boolean; reason?: string }> {
   const connection = getSolanaConnection();
 
-  // Poll up to ~45s — public RPCs often need several seconds before a new tx is indexed.
-  const maxAttempts = 15;
+  // ~16s polling. Helius RPC indexes within ~1s; the public mainnet RPC
+  // may need a few seconds. The webhook path is the primary success
+  // pipeline — this fallback covers the early window before it fires.
+  const maxAttempts = 8;
   let parsed = null;
   for (let i = 0; i < maxAttempts; i++) {
     parsed = await connection.getParsedTransaction(params.signature, {
@@ -127,7 +141,7 @@ export async function verifyPurchaseTransaction(params: {
       commitment: "confirmed",
     });
     if (parsed) break;
-    await new Promise((r) => setTimeout(r, 3_000));
+    await new Promise((r) => setTimeout(r, 2_000));
   }
 
   if (!parsed) return { ok: false, reason: "Transaction not found after 45 seconds. It may still confirm — try again in a moment." };

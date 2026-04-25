@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   // discover via the reference pubkey.
   let signature: string | null = hint ?? null;
   if (!signature) {
-    signature = await findReferenceSignature(reference, { maxAttempts: 15, intervalMs: 3_000 });
+    signature = await findReferenceSignature(reference, { maxAttempts: 8, intervalMs: 2_000 });
   }
   if (!signature) {
     return NextResponse.json(
