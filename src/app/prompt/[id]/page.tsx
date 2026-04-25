@@ -55,14 +55,30 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
           </div>
 
           <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-            <div className="h-10 w-10 rounded-full bg-muted" />
-            <div className="flex-1">
+            <Link
+              href={`/u/${prompt.creator.username}`}
+              className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted"
+            >
+              {prompt.creator.avatar_url && (
+                <Image
+                  src={prompt.creator.avatar_url}
+                  alt={prompt.creator.display_name ?? prompt.creator.username}
+                  fill
+                  sizes="40px"
+                  className="object-cover"
+                />
+              )}
+            </Link>
+            <div className="flex-1 min-w-0">
               <Link
                 href={`/u/${prompt.creator.username}`}
-                className="text-sm font-medium hover:underline"
+                className="block truncate text-sm font-medium hover:underline"
               >
-                @{prompt.creator.username}
+                {prompt.creator.display_name ?? `@${prompt.creator.username}`}
               </Link>
+              {prompt.creator.display_name && (
+                <p className="truncate text-xs text-muted-foreground">@{prompt.creator.username}</p>
+              )}
               <p className="text-xs text-muted-foreground">
                 {formatRelativeTime(prompt.created_at)} · {prompt.purchase_count} sales
               </p>

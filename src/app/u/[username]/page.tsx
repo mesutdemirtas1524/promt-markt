@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { fetchPromptCards } from "@/lib/queries";
@@ -19,7 +20,17 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-        <div className="h-20 w-20 rounded-full bg-muted" />
+        <div className="relative h-20 w-20 overflow-hidden rounded-full bg-muted">
+          {user.avatar_url && (
+            <Image
+              src={user.avatar_url}
+              alt={user.display_name ?? user.username}
+              fill
+              sizes="80px"
+              className="object-cover"
+            />
+          )}
+        </div>
         <div>
           <h1 className="text-2xl font-bold">{user.display_name ?? `@${user.username}`}</h1>
           <p className="text-sm text-muted-foreground">@{user.username}</p>

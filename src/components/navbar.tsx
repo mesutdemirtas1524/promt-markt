@@ -5,18 +5,25 @@ import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "./ui/button";
 import { Search, Upload, LayoutDashboard, LogOut } from "lucide-react";
-import { shortAddress } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useSolBalance } from "@/hooks/use-sol-balance";
+import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
+
+function formatSolBalance(sol: number): string {
+  if (sol >= 100) return sol.toFixed(2);
+  if (sol >= 1) return sol.toFixed(3);
+  return sol.toFixed(4);
+}
 
 export function Navbar() {
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { ready, authenticated, login, logout } = usePrivy();
+  const { dbUser } = useCurrentUser();
+  const { usd } = useSolPrice();
+  const balance = useSolBalance(dbUser?.wallet_address);
   const router = useRouter();
 
-  const solanaWallet = user?.linkedAccounts?.find(
-    (a) => a.type === "wallet" && "chainType" in a && a.chainType === "solana"
-  );
-  const walletAddress =
-    solanaWallet && "address" in solanaWallet ? (solanaWallet.address as string) : null;
+  const balanceUsd = balance !== null ? solToUsdString(balance, usd) : "";
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur">
@@ -57,11 +64,48 @@ export function Navbar() {
                   <LayoutDashboard className="h-4 w-4" />
                 </Button>
               </Link>
-              {walletAddress && (
-                <span className="hidden rounded-md bg-muted px-2 py-1 font-mono text-xs text-muted-foreground lg:inline">
-                  {shortAddress(walletAddress)}
-                </span>
+
+              {dbUser?.wallet_address && balance !== null && (
+                <div className="hidden rounded-md bg-muted px-2.5 py-1 text-right text-xs leading-tight md:block">
+                  <div className="font-medium text-foreground">
+                    {formatSolBalance(balance)} SOL
+                  </div>
+                  {balanceUsd && (
+                    <div className="text-[10px] text-muted-foreground">{balanceUsd}</div>
+                  )}
+                </div>
               )}
+
+              {dbUser && (
+                <Link
+                  href={`/u/${dbUser.username}`}
+                  className="flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-accent"
+                  aria-label="My profile"
+                >
+                  <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
+                    {dbUser.avatar_url && (
+                      <Image
+                        src={dbUser.avatar_url}
+                        alt={dbUser.display_name ?? dbUser.username}
+                        fill
+                        sizes="32px"
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
+                  <div className="hidden min-w-0 max-w-[140px] flex-col text-left leading-tight sm:flex">
+                    <span className="truncate text-xs font-medium text-foreground">
+                      {dbUser.display_name ?? `@${dbUser.username}`}
+                    </span>
+                    {dbUser.display_name && (
+                      <span className="truncate text-[10px] text-muted-foreground">
+                        @{dbUser.username}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              )}
+
               <Button variant="ghost" size="icon" onClick={() => logout()} aria-label="Log out">
                 <LogOut className="h-4 w-4" />
               </Button>

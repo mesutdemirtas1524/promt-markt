@@ -98,12 +98,10 @@ export async function verifyPurchaseTransaction(params: {
   const expectedTotal = solToLamports(params.expectedPriceSol);
   const { creatorLamports, platformLamports } = splitLamports(expectedTotal);
 
-  // Walk through instructions, summing transfers to creator and platform wallets.
   let toCreator = 0;
   let toPlatform = 0;
   let buyerSigned = false;
 
-  // Verify buyer signed
   const accountKeys = parsed.transaction.message.accountKeys;
   for (const key of accountKeys) {
     if (key.pubkey.toBase58() === params.expectedBuyer && key.signer) {
@@ -114,7 +112,6 @@ export async function verifyPurchaseTransaction(params: {
 
   const instructions = parsed.transaction.message.instructions;
   for (const ix of instructions) {
-    // Narrow to parsed system transfer
     if ("parsed" in ix && ix.program === "system" && ix.parsed?.type === "transfer") {
       const { destination, lamports, source } = ix.parsed.info as {
         source: string;
@@ -123,11 +120,19 @@ export async function verifyPurchaseTransaction(params: {
       };
       if (source !== params.expectedBuyer) continue;
       if (destination === params.expectedCreator) toCreator += lamports;
-      else if (destination === PLATFORM_WALLET) toPlatform += lamports;
+      if (destination === PLATFORM_WALLET) toPlatform += lamports;
     }
   }
 
-  // Allow a tiny rounding tolerance (1 lamport)
+  // Edge case: creator wallet == platform wallet (e.g., platform owner sells their own prompt).
+  // The same destination got counted in both buckets. Require the total received to equal the price.
+  if (params.expectedCreator === PLATFORM_WALLET) {
+    if (Math.abs(toCreator - expectedTotal) > 1) {
+      return { ok: false, reason: `Total received wrong amount (got ${toCreator}, expected ${expectedTotal}).` };
+    }
+    return { ok: true };
+  }
+
   if (Math.abs(toCreator - creatorLamports) > 1) {
     return { ok: false, reason: `Creator received wrong amount (got ${toCreator}, expected ${creatorLamports}).` };
   }

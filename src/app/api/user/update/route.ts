@@ -13,6 +13,7 @@ const bodySchema = z.object({
     .regex(/^[a-z0-9_]+$/, "Only lowercase letters, numbers, and underscore"),
   display_name: z.string().max(60).optional(),
   bio: z.string().max(280).optional(),
+  avatar_url: z.string().url().max(500).nullable().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -40,14 +41,16 @@ export async function POST(req: NextRequest) {
     if (taken) return NextResponse.json({ error: "Username taken" }, { status: 409 });
   }
 
-  const { error } = await supabase
-    .from("users")
-    .update({
-      username: parsed.data.username,
-      display_name: parsed.data.display_name?.trim() || null,
-      bio: parsed.data.bio?.trim() || null,
-    })
-    .eq("id", user.id);
+  const updates: Record<string, string | null> = {
+    username: parsed.data.username,
+    display_name: parsed.data.display_name?.trim() || null,
+    bio: parsed.data.bio?.trim() || null,
+  };
+  if (parsed.data.avatar_url !== undefined) {
+    updates.avatar_url = parsed.data.avatar_url;
+  }
+
+  const { error } = await supabase.from("users").update(updates).eq("id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
