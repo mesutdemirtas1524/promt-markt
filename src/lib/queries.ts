@@ -253,7 +253,10 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
     prompt = full.data ?? null;
   }
 
-  if (!prompt) return null;
+  if (!prompt) {
+    console.warn("fetchPromptDetail: no prompt row returned for id", promptId);
+    return null;
+  }
 
   let hasPurchased = false;
   if (viewerUserId && viewerUserId !== prompt.creator_id) {
@@ -268,7 +271,13 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   const isOwner = Boolean(viewerUserId && viewerUserId === prompt.creator_id);
 
   // Removed prompts are only visible to the creator and to past buyers.
-  if (prompt.status !== "active" && !isOwner && !hasPurchased) return null;
+  if (prompt.status !== "active" && !isOwner && !hasPurchased) {
+    console.warn(
+      "fetchPromptDetail: hiding non-active prompt from non-owner/non-buyer",
+      { promptId, status: prompt.status, isOwner, hasPurchased }
+    );
+    return null;
+  }
 
   let hasAccess = false;
   if (isOwner || hasPurchased) {

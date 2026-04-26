@@ -82,20 +82,35 @@ export async function generateMetadata({
 export default async function PromptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const viewer = await getCurrentUser();
-  const result = await fetchPromptDetail(id, viewer?.id ?? null);
+  let result: Awaited<ReturnType<typeof fetchPromptDetail>> = null;
+  try {
+    result = await fetchPromptDetail(id, viewer?.id ?? null);
+  } catch (err) {
+    console.error("PromptPage: fetchPromptDetail threw for id", id, err);
+    notFound();
+  }
   if (!result) notFound();
   const { t } = await getServerT();
 
   const { prompt, hasAccess, myRating, isOwnPrompt, analysis } = result;
   const isRemoved = prompt.status === "removed";
 
-  // Side fetches for trust signals: creator's other prompts + cumulative stats
+  // Side fetches for trust signals: creator's other prompts + cumulative
+  // stats + cross-creator recommendations. Any of these throwing would
+  // crash the whole page, so we fall each back to an empty default and
+  // log the error instead of taking the page down.
   const [creatorStats, otherPrompts, similar] = await Promise.all([
-    fetchCreatorStats(prompt.creator.id),
+    fetchCreatorStats(prompt.creator.id).catch((err) => {
+      console.error("PromptPage: fetchCreatorStats failed", err);
+      return { activePrompts: 0, totalSales: 0 };
+    }),
     fetchPromptCards({
       creatorId: prompt.creator.id,
       orderBy: "newest",
       limit: 8,
+    }).catch((err) => {
+      console.error("PromptPage: fetchPromptCards (creator) failed", err);
+      return [];
     }),
     fetchSimilarPrompts({
       promptId: prompt.id,
@@ -103,6 +118,9 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
       categoryId: prompt.category?.id ?? null,
       platformIds: (prompt.platforms as Array<{ id: number }>).map((p) => p.id),
       limit: 6,
+    }).catch((err) => {
+      console.error("PromptPage: fetchSimilarPrompts failed", err);
+      return [];
     }),
   ]);
   const moreFromCreator = otherPrompts.filter((p) => p.id !== prompt.id).slice(0, 6);
