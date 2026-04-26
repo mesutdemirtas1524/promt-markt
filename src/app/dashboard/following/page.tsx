@@ -33,7 +33,7 @@ export default async function FollowingFeedPage() {
             You&apos;re not following anyone yet.
           </p>
           <Link
-            href="/explore"
+            href="/creators"
             className="mt-4 inline-block text-sm text-violet-300 hover:underline"
           >
             Discover creators →

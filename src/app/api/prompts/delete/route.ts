@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
   // Drop the prompt from cached feeds right away.
   revalidatePath("/");
-  revalidatePath("/explore");
+  revalidatePath("/new");
 
   return NextResponse.json({ ok: true });
 }

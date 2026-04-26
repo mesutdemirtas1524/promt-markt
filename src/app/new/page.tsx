@@ -29,7 +29,7 @@ export default async function NewArrivalsPage() {
             </p>
           </div>
           <Link
-            href="/explore"
+            href="/"
             className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Advanced filters <ArrowRight className="h-3 w-3" />

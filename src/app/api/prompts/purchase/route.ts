@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
 
   // Sales count and trending order changed — refresh public feeds.
   revalidatePath("/");
-  revalidatePath("/explore");
+  revalidatePath("/new");
 
   // Best-effort sale email to the creator. Don't block the response.
   void (async () => {

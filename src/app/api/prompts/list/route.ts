@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 /**
  * Paginated public prompt feed. Used by InfiniteFeed on the homepage
- * and /explore. Cursor is a simple offset (limit/offset). Fine for
+ * (which is now also the discover page). Cursor is a simple offset. Fine for
  * thousands of rows; revisit if catalog grows past low millions.
  */
 export async function GET(req: NextRequest) {

@@ -14,7 +14,7 @@ export async function Footer() {
           <span className="ml-1 text-xs text-muted-foreground">· {t("footer.tagline")}</span>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-          <Link href="/explore" className="transition-colors hover:text-foreground">
+          <Link href="/" className="transition-colors hover:text-foreground">
             {t("nav.explore")}
           </Link>
           <Link href="/new" className="transition-colors hover:text-foreground">

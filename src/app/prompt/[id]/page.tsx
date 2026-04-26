@@ -284,7 +284,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-base font-semibold tracking-tight">You might also like</h2>
             <Link
-              href="/explore"
+              href="/"
               className="text-xs text-muted-foreground hover:text-foreground"
             >
               Browse more →

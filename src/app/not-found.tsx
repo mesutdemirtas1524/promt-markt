@@ -10,15 +10,14 @@ export default function NotFound() {
       </div>
       <h1 className="text-3xl font-semibold tracking-tight">Page not found</h1>
       <p className="mt-3 max-w-md text-sm text-muted-foreground">
-        The page you&apos;re looking for doesn&apos;t exist or was removed. Try the explore feed —
-        you might find something better.
+        The page you&apos;re looking for doesn&apos;t exist or was removed.
       </p>
       <div className="mt-7 flex gap-3">
-        <Link href="/explore">
+        <Link href="/">
           <Button variant="primary">Browse prompts</Button>
         </Link>
-        <Link href="/">
-          <Button variant="outline">Go home</Button>
+        <Link href="/creators">
+          <Button variant="outline">Top creators</Button>
         </Link>
       </div>
     </div>

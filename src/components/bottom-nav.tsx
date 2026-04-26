@@ -30,11 +30,11 @@ export function BottomNav() {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="flex h-14 w-full items-center justify-around px-2">
-        <NavItem href="/" label="Home" active={isActive("/")}>
-          <Home className="h-5 w-5" />
-        </NavItem>
-        <NavItem href="/explore" label="Explore" active={isActive("/explore")}>
+        <NavItem href="/" label="Discover" active={isActive("/") && pathname === "/"}>
           <Compass className="h-5 w-5" />
+        </NavItem>
+        <NavItem href="/new" label="New" active={isActive("/new")}>
+          <Home className="h-5 w-5" />
         </NavItem>
 
         {/* Center Create — raised pill */}

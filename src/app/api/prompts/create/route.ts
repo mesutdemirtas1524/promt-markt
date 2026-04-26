@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
   // Invalidate the cached feeds so the new prompt appears immediately
   // instead of waiting up to 60s for the next ISR refresh.
   revalidatePath("/");
-  revalidatePath("/explore");
+  revalidatePath("/new");
 
   return NextResponse.json({ prompt_id: prompt.id });
 }

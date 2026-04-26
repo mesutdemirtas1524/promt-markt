@@ -72,7 +72,7 @@ export async function POST(
     if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 });
 
     revalidatePath("/");
-    revalidatePath("/explore");
+    revalidatePath("/new");
   } else {
     const { error } = await supabase
       .from("reports")

@@ -49,12 +49,6 @@ export function Navbar() {
           </Link>
           <nav className="hidden items-center gap-1 text-sm md:flex">
             <Link
-              href="/explore"
-              className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-tint-2 hover:text-foreground"
-            >
-              {t("nav.explore")}
-            </Link>
-            <Link
               href="/new"
               className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-tint-2 hover:text-foreground"
             >
@@ -71,7 +65,7 @@ export function Navbar() {
 
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => router.push("/explore")}
+            onClick={() => router.push("/")}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-tint-2 hover:text-foreground md:hidden"
             aria-label={t("nav.search")}
           >

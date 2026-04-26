@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   // Edits change title, description, price — invalidate the feeds so the
   // change appears immediately even though /prompt/[id] itself is dynamic.
   revalidatePath("/");
-  revalidatePath("/explore");
+  revalidatePath("/new");
 
   return NextResponse.json({ ok: true });
 }

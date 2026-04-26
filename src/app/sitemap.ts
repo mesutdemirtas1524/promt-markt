@@ -24,8 +24,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1.0 },
-    { url: `${SITE_URL}/explore`, changeFrequency: "hourly", priority: 0.9 },
+    { url: `${SITE_URL}/`, changeFrequency: "hourly", priority: 1.0 },
+    { url: `${SITE_URL}/new`, changeFrequency: "hourly", priority: 0.8 },
+    { url: `${SITE_URL}/creators`, changeFrequency: "daily", priority: 0.7 },
   ];
 
   const promptRoutes: MetadataRoute.Sitemap = (prompts ?? []).map((p) => ({
