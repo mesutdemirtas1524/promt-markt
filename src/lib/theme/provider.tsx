@@ -16,15 +16,25 @@ const ThemeContext = createContext<Ctx>({
   toggleTheme: () => {},
 });
 
-function readInitialTheme(): Theme {
-  if (typeof document === "undefined") return "dark";
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(readInitialTheme);
+  // Initial state must equal what SSR rendered with (dark) so any text or
+  // markup that depends on `theme` doesn't drift on hydration. The DOM
+  // class is already correct because of the inline init script in <head>;
+  // we re-sync the React state in a useEffect after mount so consumers
+  // observe the user's actual preference.
+  const [theme, setThemeState] = useState<Theme>("dark");
 
   useEffect(() => {
+    if (typeof document !== "undefined") {
+      const isDark = document.documentElement.classList.contains("dark");
+      const next: Theme = isDark ? "dark" : "light";
+      if (next !== theme) setThemeState(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
     const root = document.documentElement;
     if (theme === "dark") root.classList.add("dark");
     else root.classList.remove("dark");

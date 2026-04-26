@@ -66,8 +66,10 @@ const initScript = `
     var l = ck.match(/(?:^|;\\s*)pm-locale=([^;]+)/);
     var theme = t ? decodeURIComponent(t[1]) : "dark";
     var locale = l ? decodeURIComponent(l[1]) : "en";
-    if (theme === "dark") document.documentElement.classList.add("dark");
-    document.documentElement.lang = locale === "tr" ? "tr" : "en";
+    var de = document.documentElement;
+    if (theme === "dark") de.classList.add("dark");
+    else de.classList.remove("dark");
+    de.lang = locale === "tr" ? "tr" : "en";
   } catch (e) { /* noop */ }
 })();
 `;

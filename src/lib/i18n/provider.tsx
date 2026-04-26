@@ -9,13 +9,6 @@ type Ctx = {
   t: (key: TranslationKey) => string;
 };
 
-function readInitialLocale(): Locale {
-  if (typeof document === "undefined") return DEFAULT_LOCALE;
-  const lang = document.documentElement.lang;
-  if (lang === "tr") return "tr";
-  return DEFAULT_LOCALE;
-}
-
 const LocaleContext = createContext<Ctx>({
   locale: DEFAULT_LOCALE,
   setLocale: () => {},
@@ -23,11 +16,27 @@ const LocaleContext = createContext<Ctx>({
 });
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(readInitialLocale);
+  // Initial state must equal what SSR rendered with (the default locale).
+  // Reading the cookie/DOM here would diverge between server and client and
+  // trip React's hydration check on every translated string. We sync from
+  // the DOM in useEffect after hydration; the inline <head> init script
+  // already painted the right <html lang> so the visual flash is small.
+  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
 
-  // Sync <html lang> when locale changes (init script set it on first paint)
   useEffect(() => {
-    document.documentElement.lang = locale;
+    if (typeof document !== "undefined") {
+      const lang = document.documentElement.lang;
+      const next: Locale = lang === "tr" ? "tr" : "en";
+      if (next !== locale) setLocaleState(next);
+    }
+    // Intentionally only runs once on mount; later changes are driven by
+    // setLocale() calls, which sync the DOM lang attribute themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep <html lang> in sync whenever the locale changes after mount.
+  useEffect(() => {
+    if (typeof document !== "undefined") document.documentElement.lang = locale;
   }, [locale]);
 
   const setLocale = useCallback((l: Locale) => {
