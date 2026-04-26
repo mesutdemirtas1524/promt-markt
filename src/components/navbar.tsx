@@ -71,14 +71,16 @@ export function Navbar() {
 
           {ready && authenticated ? (
             <>
-              <Link href="/upload" className="ml-1">
+              <Link href="/upload" className="ml-1 hidden md:inline-flex">
                 <Button variant="primary" size="sm" className="gap-1.5">
                   <Plus className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{t("nav.create")}</span>
                 </Button>
               </Link>
 
-              <NotificationsBell />
+              <div className="hidden md:inline-flex">
+                <NotificationsBell />
+              </div>
 
               <Link href="/dashboard/favorites">
                 <Button variant="ghost" size="icon" aria-label={t("nav.favorites")} className="h-9 w-9">
@@ -86,7 +88,7 @@ export function Navbar() {
                 </Button>
               </Link>
 
-              <Link href="/dashboard">
+              <Link href="/dashboard" className="hidden md:inline-flex">
                 <Button variant="ghost" size="icon" aria-label={t("nav.dashboard")} className="h-9 w-9">
                   <LayoutDashboard className="h-4 w-4" />
                 </Button>

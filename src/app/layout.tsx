@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Navbar } from "@/components/navbar";
+import { BottomNav } from "@/components/bottom-nav";
 import { Footer } from "@/components/footer";
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
 
@@ -87,11 +88,12 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: initScript }} />
       </head>
-      <body className="min-h-full flex flex-col font-sans">
+      <body className="min-h-full flex flex-col font-sans pb-16 md:pb-0">
         <Providers>
           <Navbar />
           <main className="flex-1">{children}</main>
           <Footer />
+          <BottomNav />
         </Providers>
       </body>
     </html>
