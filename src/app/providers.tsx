@@ -9,6 +9,7 @@ import { FavoritesProvider } from "@/hooks/use-favorites";
 import { FollowingProvider } from "@/hooks/use-following";
 import { ThemeProvider } from "@/lib/theme/provider";
 import { LocaleProvider } from "@/lib/i18n/provider";
+import { OnboardingModal } from "@/components/onboarding-modal";
 
 const solanaConnectors = toSolanaWalletConnectors();
 
@@ -57,6 +58,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <FollowingProvider>
             <SolPriceProvider>
               {children}
+              <OnboardingModal />
               <Toaster position="bottom-right" />
             </SolPriceProvider>
           </FollowingProvider>
