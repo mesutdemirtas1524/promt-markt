@@ -213,20 +213,45 @@ export async function fetchPlatforms() {
 
 export async function fetchPromptDetail(promptId: string, viewerUserId: string | null) {
   const supabase = createSupabaseServiceClient();
-  const { data: prompt } = await supabase
-    .from("prompts")
-    .select(
-      `
+  // Try the full select with the multi-category join. If the join table
+  // hasn't been migrated yet, retry without it so the detail page still
+  // renders — we'll just have the legacy single category until the
+  // operator runs migration 015.
+  const fullSelect = `
       *,
       creator:users!creator_id ( id, username, display_name, avatar_url, wallet_address ),
       images:prompt_images ( id, image_url, position, width, height ),
       category:categories ( id, name, slug ),
       categories:prompt_categories ( categories ( id, name, slug ) ),
       platforms:prompt_platforms ( platforms ( id, name, slug ) )
-    `
-    )
-    .eq("id", promptId)
-    .maybeSingle();
+    `;
+  const fallbackSelect = `
+      *,
+      creator:users!creator_id ( id, username, display_name, avatar_url, wallet_address ),
+      images:prompt_images ( id, image_url, position, width, height ),
+      category:categories ( id, name, slug ),
+      platforms:prompt_platforms ( platforms ( id, name, slug ) )
+    `;
+
+  // The supabase client is heavily typed off the relational select string,
+  // so we erase that here and re-narrow at the consumption site below.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let prompt: any = null;
+  const full = await supabase.from("prompts").select(fullSelect).eq("id", promptId).maybeSingle();
+  if (full.error) {
+    console.warn(
+      "fetchPromptDetail: full select failed, retrying without join:",
+      full.error.message
+    );
+    const lite = await supabase
+      .from("prompts")
+      .select(fallbackSelect)
+      .eq("id", promptId)
+      .maybeSingle();
+    prompt = lite.data ?? null;
+  } else {
+    prompt = full.data ?? null;
+  }
 
   if (!prompt) return null;
 
