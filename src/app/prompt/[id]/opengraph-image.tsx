@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import { formatSol } from "@/lib/utils";
+import { formatUsd } from "@/lib/utils";
 
 export const runtime = "nodejs";
 export const alt = "Prompt on Promt Markt";
@@ -12,7 +12,7 @@ export default async function Image({ params }: { params: { id: string } }) {
   const { data: prompt } = await supabase
     .from("prompts")
     .select(
-      `id, title, price_sol,
+      `id, title, price_usd,
        creator:users!creator_id ( username, display_name, avatar_url ),
        images:prompt_images ( image_url, position )`
     )
@@ -28,8 +28,8 @@ export default async function Image({ params }: { params: { id: string } }) {
     (a, b) => a.position - b.position
   );
   const cover = imgs[0]?.image_url ?? null;
-  const price = Number(prompt.price_sol);
-  const priceLabel = price === 0 ? "FREE" : `${formatSol(price)} SOL`;
+  const price = Number(prompt.price_usd);
+  const priceLabel = price === 0 ? "FREE" : formatUsd(price).toUpperCase();
   const creatorName = creator?.display_name ?? `@${creator?.username ?? "creator"}`;
   const creatorHandle = creator?.username ? `@${creator.username}` : "";
 

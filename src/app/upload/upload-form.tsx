@@ -13,7 +13,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { HighlightablePromptInput } from "@/components/highlightable-prompt-input";
 import { PROMPT_LIMITS, ACCEPTED_IMAGE_TYPES } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
+import { useSolPrice } from "@/hooks/use-sol-price";
+import { formatSol } from "@/lib/utils";
 import { Loader2, Upload, X } from "lucide-react";
 import type { Category, Platform } from "@/lib/supabase/types";
 
@@ -65,7 +66,7 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [promptText, setPromptText] = useState("");
-  const [priceSol, setPriceSol] = useState("0");
+  const [priceUsd, setPriceUsd] = useState("0");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [platformIds, setPlatformIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -117,13 +118,13 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
       return;
     }
 
-    const price = parseFloat(priceSol);
+    const price = parseFloat(priceUsd);
     if (Number.isNaN(price) || price < 0 || price > PROMPT_LIMITS.price.max) {
       toast.error("Invalid price");
       return;
     }
     if (price > 0 && price < PROMPT_LIMITS.price.minPaid) {
-      toast.error(`Paid prompts must be at least ${PROMPT_LIMITS.price.minPaid} SOL`);
+      toast.error(`Paid prompts must be at least $${PROMPT_LIMITS.price.minPaid}`);
       return;
     }
     if (title.length < PROMPT_LIMITS.title.min) {
@@ -191,7 +192,7 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
           title,
           description,
           prompt_text: promptText,
-          price_sol: price,
+          price_usd: price,
           category_id: categoryId,
           platform_ids: platformIds,
           images: uploads.map((u, i) => ({
@@ -367,29 +368,35 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
 
       {/* Price */}
       <div>
-        <Label htmlFor="price">Price in SOL (0 for free)</Label>
+        <Label htmlFor="price">Price in USD (0 for free)</Label>
         <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
+            $
+          </span>
           <Input
             id="price"
             type="number"
             min="0"
             max={PROMPT_LIMITS.price.max}
-            step="0.001"
-            value={priceSol}
-            onChange={(e) => setPriceSol(e.target.value)}
+            step="0.01"
+            value={priceUsd}
+            onChange={(e) => setPriceUsd(e.target.value)}
+            className="pl-7 pr-24"
           />
           {(() => {
-            const p = parseFloat(priceSol);
-            const dollars = Number.isFinite(p) ? solToUsdString(p, solUsd) : "";
-            return dollars ? (
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                ≈ {dollars}
+            const p = parseFloat(priceUsd);
+            if (!Number.isFinite(p) || p <= 0 || !solUsd) return null;
+            const sol = p / solUsd;
+            return (
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums text-muted-foreground">
+                ≈ {formatSol(sol)} SOL
               </span>
-            ) : null;
+            );
           })()}
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          You receive 80%. Minimum paid price: {PROMPT_LIMITS.price.minPaid} SOL. Free prompts can&apos;t be rated.
+          You receive 80%. Minimum paid price: ${PROMPT_LIMITS.price.minPaid}. Buyers pay in
+          SOL at the live rate at checkout. Free prompts can&apos;t be rated.
         </p>
       </div>
 

@@ -50,6 +50,10 @@ export type Prompt = {
   title: string;
   description: string;
   prompt_text: string;
+  /** USD source-of-truth price set by the creator. */
+  price_usd: number;
+  /** Cached SOL value at the time of upload. Display fallback only —
+   *  checkout always recomputes from the live SOL/USD price. */
   price_sol: number;
   category_id: number | null;
   status: "active" | "removed";

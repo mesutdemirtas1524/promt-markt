@@ -22,7 +22,7 @@ import { FavoriteButton } from "@/components/favorite-button";
 import { OwnerActions } from "@/components/owner-actions";
 import { PromptGallery } from "@/components/image-lightbox";
 import { ViewTracker } from "@/components/view-tracker";
-import { formatRating, formatRelativeTime, formatSol } from "@/lib/utils";
+import { formatRating, formatRelativeTime, formatUsd } from "@/lib/utils";
 import { Pencil, Star, Heart, ShoppingBag } from "lucide-react";
 
 // Per-user state (isOwnPrompt, hasAccess, isFavorited) prevents safe ISR.
@@ -39,7 +39,7 @@ export async function generateMetadata({
   const { data: prompt } = await supabase
     .from("prompts")
     .select(
-      `id, title, description, price_sol, status,
+      `id, title, description, price_usd, status,
        creator:users!creator_id ( username, display_name ),
        images:prompt_images ( image_url, position )`
     )
@@ -54,8 +54,8 @@ export async function generateMetadata({
     (a, b) => a.position - b.position
   );
   const cover = imgs[0]?.image_url;
-  const price = Number(prompt.price_sol);
-  const priceLabel = price === 0 ? "Free" : `${formatSol(price)} SOL`;
+  const price = Number(prompt.price_usd);
+  const priceLabel = price === 0 ? "Free" : formatUsd(price);
   const title = `${prompt.title} · ${priceLabel}`;
   const description = (prompt.description ?? "").slice(0, 200);
   const creatorName = creator?.display_name ?? `@${creator?.username ?? "creator"}`;
@@ -244,7 +244,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
 
           <PromptDetailActions
             promptId={prompt.id}
-            priceSol={Number(prompt.price_sol)}
+            priceUsd={Number(prompt.price_usd)}
             creatorWallet={prompt.creator.wallet_address}
             hasAccess={hasAccess}
             isOwnPrompt={isOwnPrompt}

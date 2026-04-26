@@ -17,7 +17,7 @@ export default async function EditPromptPage({ params }: { params: Promise<{ id:
     .from("prompts")
     .select(
       `
-      id, creator_id, title, description, prompt_text, price_sol, category_id, status,
+      id, creator_id, title, description, prompt_text, price_usd, category_id, status,
       platforms:prompt_platforms ( platform_id )
     `
     )
@@ -39,7 +39,7 @@ export default async function EditPromptPage({ params }: { params: Promise<{ id:
           title: prompt.title,
           description: prompt.description,
           prompt_text: prompt.prompt_text,
-          price_sol: Number(prompt.price_sol),
+          price_usd: Number(prompt.price_usd),
           category_id: prompt.category_id,
           platform_ids: platformIds,
         }}

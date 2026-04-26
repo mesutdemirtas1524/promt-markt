@@ -4,6 +4,7 @@ import { z } from "zod";
 import { verifyPrivyToken } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { PROMPT_LIMITS } from "@/lib/constants";
+import { fetchSolUsdPriceServer, usdToSol } from "@/lib/sol-price-server";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,7 @@ const updateSchema = z.object({
   title: z.string().min(PROMPT_LIMITS.title.min).max(PROMPT_LIMITS.title.max),
   description: z.string().min(PROMPT_LIMITS.description.min).max(PROMPT_LIMITS.description.max),
   prompt_text: z.string().min(PROMPT_LIMITS.promptText.min).max(PROMPT_LIMITS.promptText.max),
-  price_sol: z.number().min(0).max(PROMPT_LIMITS.price.max),
+  price_usd: z.number().min(0).max(PROMPT_LIMITS.price.max),
   category_id: z.number().int().nullable(),
   platform_ids: z.array(z.number().int()).max(10),
 });
@@ -30,9 +31,9 @@ export async function POST(req: NextRequest) {
   }
   const input = parsed.data;
 
-  if (input.price_sol > 0 && input.price_sol < PROMPT_LIMITS.price.minPaid) {
+  if (input.price_usd > 0 && input.price_usd < PROMPT_LIMITS.price.minPaid) {
     return NextResponse.json(
-      { error: `Paid prompts must be at least ${PROMPT_LIMITS.price.minPaid} SOL` },
+      { error: `Paid prompts must be at least $${PROMPT_LIMITS.price.minPaid}` },
       { status: 400 }
     );
   }
@@ -51,13 +52,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not your prompt" }, { status: 403 });
   }
 
+  let priceSol = 0;
+  if (input.price_usd > 0) {
+    const solUsd = await fetchSolUsdPriceServer();
+    if (!solUsd) {
+      return NextResponse.json(
+        { error: "Live SOL price unavailable. Try again in a moment." },
+        { status: 503 }
+      );
+    }
+    priceSol = Math.round(usdToSol(input.price_usd, solUsd) * 1_000_000) / 1_000_000;
+  }
+
   const { error: updErr } = await supabase
     .from("prompts")
     .update({
       title: input.title.trim(),
       description: input.description.trim(),
       prompt_text: input.prompt_text.trim(),
-      price_sol: input.price_sol,
+      price_usd: input.price_usd,
+      price_sol: priceSol,
       category_id: input.category_id,
     })
     .eq("id", input.prompt_id);

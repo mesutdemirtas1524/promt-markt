@@ -14,6 +14,20 @@ export function formatSol(amount: number | string | null | undefined): string {
   return n.toFixed(3);
 }
 
+/**
+ * Format a USD amount: "Free" for 0, "$X.YZ" otherwise. Falls back to
+ * "$0.00" for null/undefined so we always render something.
+ */
+export function formatUsd(amount: number | string | null | undefined): string {
+  if (amount === null || amount === undefined) return "$0.00";
+  const n = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (!Number.isFinite(n) || n <= 0) return "Free";
+  if (n < 1) return `$${n.toFixed(2)}`;
+  if (n < 100) return `$${n.toFixed(2)}`;
+  if (n < 1000) return `$${n.toFixed(0)}`;
+  return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
+
 export function formatRating(avg: number | null | undefined, count: number | null | undefined): string {
   if (!count || count === 0) return "No ratings";
   const n = typeof avg === "string" ? parseFloat(avg) : avg ?? 0;

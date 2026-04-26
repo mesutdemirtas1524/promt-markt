@@ -9,11 +9,11 @@ import { toast } from "sonner";
 import { PublicKey, SystemProgram, Transaction, Connection } from "@solana/web3.js";
 import bs58 from "bs58";
 import { SOLANA_RPC_URL, SOLANA_NETWORK } from "@/lib/constants";
-import { formatSol } from "@/lib/utils";
+import { formatSol, formatUsd } from "@/lib/utils";
 import { Loader2, Lock, Star, Tag, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
+import { useSolPrice } from "@/hooks/use-sol-price";
 import { useT } from "@/lib/i18n/provider";
 import { PromptText } from "./prompt-text";
 import type { PromptAnalysis } from "@/lib/prompt-analysis";
@@ -21,7 +21,7 @@ import { Hash, Type, Sparkles as SparklesIcon } from "lucide-react";
 
 type Props = {
   promptId: string;
-  priceSol: number;
+  priceUsd: number;
   creatorWallet: string | null;
   hasAccess: boolean;
   isOwnPrompt: boolean;
@@ -35,11 +35,13 @@ export function PromptDetailActions(props: Props) {
   const { wallets } = useWallets();
   const { signAndSendTransaction } = useSignAndSendTransaction();
   const { dbUser } = useCurrentUser();
-  const { usd } = useSolPrice();
+  const { usd: solUsd } = useSolPrice();
   const router = useRouter();
   const { t } = useT();
 
-  const priceUsd = solToUsdString(props.priceSol, usd);
+  const isFree = props.priceUsd <= 0;
+  // Display SOL equivalent of the listed USD price.
+  const displaySol = solUsd ? props.priceUsd / solUsd : 0;
 
   const [buying, setBuying] = useState(false);
   const [submittingRating, setSubmittingRating] = useState(false);
@@ -53,10 +55,10 @@ export function PromptDetailActions(props: Props) {
     discount_percent: number;
   } | null>(null);
 
-  const effectivePriceSol = appliedPromo
-    ? props.priceSol * (1 - appliedPromo.discount_percent / 100)
-    : props.priceSol;
-  const effectivePriceUsd = solToUsdString(effectivePriceSol, usd);
+  const effectivePriceUsd = appliedPromo
+    ? props.priceUsd * (1 - appliedPromo.discount_percent / 100)
+    : props.priceUsd;
+  const effectiveSol = solUsd ? effectivePriceUsd / solUsd : 0;
 
   async function applyPromo() {
     if (!authenticated) {
@@ -151,7 +153,7 @@ export function PromptDetailActions(props: Props) {
 
     setBuying(true);
     try {
-      if (props.priceSol === 0) {
+      if (isFree) {
         const token = await getAccessToken();
         const res = await fetch("/api/prompts/unlock-free", {
           method: "POST",
@@ -332,9 +334,9 @@ export function PromptDetailActions(props: Props) {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex items-center gap-2 rounded-full border border-zinc-700/50 bg-zinc-900/85 px-3.5 py-1.5 text-xs text-zinc-100 backdrop-blur">
                 <Lock className="h-3.5 w-3.5" />
-                {props.priceSol === 0
+                {isFree
                   ? t("detail.signInToUnlock")
-                  : `${t("detail.unlockFor")} ${formatSol(props.priceSol)} SOL${priceUsd ? ` · ${priceUsd}` : ""}`}
+                  : `${t("detail.unlockFor")} ${formatUsd(props.priceUsd)}${displaySol > 0 ? ` · ${formatSol(displaySol)} SOL` : ""}`}
               </div>
             </div>
           </div>
@@ -369,7 +371,7 @@ export function PromptDetailActions(props: Props) {
         )}
       </div>
 
-      {!props.hasAccess && !props.isOwnPrompt && props.priceSol > 0 && (
+      {!props.hasAccess && !props.isOwnPrompt && !isFree && (
         <div className="rounded-xl border border-border bg-tint-1 p-3">
           {appliedPromo ? (
             <div className="flex items-center justify-between gap-2 text-xs">
@@ -436,20 +438,24 @@ export function PromptDetailActions(props: Props) {
               <Loader2 className="h-4 w-4 animate-spin" />
               {t("detail.processing")}
             </>
-          ) : props.priceSol === 0 ? (
+          ) : isFree ? (
             t("detail.unlockFree")
           ) : appliedPromo ? (
             <>
-              {t("detail.buyFor")} {formatSol(effectivePriceSol)} SOL
-              {effectivePriceUsd && <span className="opacity-70">· {effectivePriceUsd}</span>}
+              {t("detail.buyFor")} {formatUsd(effectivePriceUsd)}
+              {effectiveSol > 0 && (
+                <span className="opacity-70">· {formatSol(effectiveSol)} SOL</span>
+              )}
               <span className="ml-1.5 text-xs line-through opacity-50">
-                {formatSol(props.priceSol)}
+                {formatUsd(props.priceUsd)}
               </span>
             </>
           ) : (
             <>
-              {t("detail.buyFor")} {formatSol(props.priceSol)} SOL
-              {priceUsd && <span className="opacity-70">· {priceUsd}</span>}
+              {t("detail.buyFor")} {formatUsd(props.priceUsd)}
+              {displaySol > 0 && (
+                <span className="opacity-70">· {formatSol(displaySol)} SOL</span>
+              )}
             </>
           )}
         </Button>
@@ -461,7 +467,7 @@ export function PromptDetailActions(props: Props) {
         </div>
       )}
 
-      {props.hasAccess && !props.isOwnPrompt && props.priceSol > 0 && (
+      {props.hasAccess && !props.isOwnPrompt && !isFree && (
         <div className="rounded-xl border border-border bg-tint-1 p-4">
           <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             <Star className="h-3.5 w-3.5" />

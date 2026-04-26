@@ -1,5 +1,6 @@
 export const APP_NAME = "Promt Markt";
 export const APP_DESCRIPTION = "A marketplace for AI image prompts — paid in Solana.";
+export const PRICE_CURRENCY = "USD" as const;
 
 export const PLATFORM_FEE_BPS = Number(process.env.NEXT_PUBLIC_PLATFORM_FEE_BPS ?? "2000");
 export const CREATOR_SHARE_BPS = 10_000 - PLATFORM_FEE_BPS;
@@ -15,13 +16,12 @@ export const PROMPT_LIMITS = {
   title: { min: 5, max: 100 },
   description: { min: 10, max: 500 },
   promptText: { min: 10, max: 4000 },
-  // Min paid price = 0.002 SOL so the creator's 80% portion (0.0016 SOL =
-  // 1,600,000 lamports) clears Solana's rent-exempt minimum (~890,880
-  // lamports for a 0-byte System account). Below this, transfers to a
-  // creator wallet that has never received SOL fail on-chain with
-  // "insufficient lamports for rent" — wallets surface this as a
-  // misleading "insufficient balance" warning to the buyer.
-  price: { min: 0, max: 10, minPaid: 0.002 },
+  // Pricing is now USD-first. minPaid is a floor that comfortably clears
+  // Solana's rent-exempt minimum even when SOL is at $50: $1 → ~0.02 SOL,
+  // creator's 80% share = 0.016 SOL ≈ 16M lamports, well above the
+  // ~890,880 lamport rent floor. Below $1 we'd start to risk failed
+  // transfers when SOL pumps higher (small lamport amounts).
+  price: { min: 0, max: 1000, minPaid: 1 },
   images: { min: 1, max: 6 },
   imageSizeMB: 5,
   dailyListings: 10,

@@ -1,46 +1,49 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Badge } from "./ui/badge";
-import { PriceTag } from "./price-tag";
-import { Star, Heart } from "lucide-react";
+import { Star, Heart, ShoppingBag } from "lucide-react";
 import { FavoriteButton } from "./favorite-button";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useSolPrice } from "@/hooks/use-sol-price";
+import { formatSol, formatUsd } from "@/lib/utils";
 
 export type PromptCardData = {
   id: string;
   title: string;
+  price_usd: number;
   price_sol: number;
   avg_rating: number | null;
   rating_count: number;
   favorite_count: number;
+  purchase_count: number;
   cover_image: string | null;
   cover_width?: number | null;
   cover_height?: number | null;
   creator_username: string;
+  creator_avatar_url?: string | null;
   status?: "active" | "removed";
 };
 
 export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const { isFavorited } = useFavorites();
+  const { usd: solUsd } = useSolPrice();
   const favorited = isFavorited(prompt.id);
   const isRemoved = prompt.status === "removed";
-  // Serve the raw original image URL — the Supabase render endpoint
-  // sometimes appears to crop/zoom in unexpected ways. Original is also
-  // required for free-tier Supabase plans where transformations aren't
-  // available. We pay a bit of bandwidth for visual fidelity.
+  const isFree = prompt.price_usd <= 0;
+
   const renderUrl = prompt.cover_image;
-  // Render at natural aspect ratio. When we know the dims, set
-  // aspect-ratio + width/height upfront to reserve the box (zero CLS).
-  // When we don't, fall back to h-auto and let the browser size the
-  // image after load. No cropping — Pinterest-style.
   const aspectStyle =
     prompt.cover_width && prompt.cover_height
       ? { aspectRatio: `${prompt.cover_width} / ${prompt.cover_height}` }
       : undefined;
 
+  // Live SOL equivalent for the price pill subtitle.
+  const solValue = !isFree && solUsd ? prompt.price_usd / solUsd : prompt.price_sol;
+
   return (
-    <div className="gradient-border ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
+    <div className="ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
       <Link href={`/prompt/${prompt.id}`} className="block">
         <div className="relative w-full overflow-hidden bg-muted" style={aspectStyle}>
           {renderUrl ? (
@@ -52,20 +55,62 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               decoding="async"
               width={prompt.cover_width ?? undefined}
               height={prompt.cover_height ?? undefined}
-              className="block h-auto w-full transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
+              className="block h-auto w-full transition-transform duration-[600ms] ease-out group-hover:scale-[1.04]"
             />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center text-xs text-muted-foreground">
               No image
             </div>
           )}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/65 via-black/15 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
+          {/* Bottom dark gradient — visible on hover for legibility */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 via-black/25 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+          {/* Top-right: price pill */}
           <div className="absolute right-2 top-2 flex flex-col items-end gap-1.5">
-            <div className="rounded-full border border-white/10 bg-black/60 px-2.5 py-0.5 text-[11px] font-semibold text-white tabular-nums backdrop-blur">
-              <PriceTag sol={prompt.price_sol} size="xs" />
-            </div>
+            {isFree ? (
+              <span className="rounded-full bg-emerald-500/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur">
+                Free
+              </span>
+            ) : (
+              <span className="flex flex-col items-end rounded-lg border border-white/10 bg-black/65 px-2.5 py-1 text-white shadow-sm backdrop-blur-md">
+                <span className="text-[13px] font-bold tabular-nums leading-none">
+                  {formatUsd(prompt.price_usd)}
+                </span>
+                {solValue > 0 && (
+                  <span className="mt-0.5 text-[9px] tabular-nums opacity-70 leading-none">
+                    {formatSol(solValue)} SOL
+                  </span>
+                )}
+              </span>
+            )}
             {isRemoved && <Badge variant="destructive">Removed</Badge>}
+          </div>
+
+          {/* Bottom-left: creator chip — only on hover */}
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-center justify-between gap-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            <div className="flex min-w-0 items-center gap-1.5 rounded-full bg-black/55 px-2 py-1 text-[11px] text-white backdrop-blur">
+              {prompt.creator_avatar_url ? (
+                <span className="relative h-4 w-4 shrink-0 overflow-hidden rounded-full">
+                  <Image
+                    src={prompt.creator_avatar_url}
+                    alt=""
+                    fill
+                    sizes="16px"
+                    className="object-cover"
+                  />
+                </span>
+              ) : (
+                <span className="h-4 w-4 shrink-0 rounded-full bg-white/15" />
+              )}
+              <span className="truncate">@{prompt.creator_username}</span>
+            </div>
+            {prompt.purchase_count > 0 && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[10px] tabular-nums text-white backdrop-blur">
+                <ShoppingBag className="h-2.5 w-2.5" />
+                {prompt.purchase_count}
+              </span>
+            )}
           </div>
         </div>
 

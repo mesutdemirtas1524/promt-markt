@@ -4,10 +4,10 @@ import { verifyPrivyToken } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import {
   generatePurchaseReference,
-  solToLamports,
   splitLamports,
 } from "@/lib/solana";
 import { PLATFORM_WALLET, PROMPT_LIMITS } from "@/lib/constants";
+import { fetchSolUsdPriceServer, usdToLamports } from "@/lib/sol-price-server";
 
 export const runtime = "nodejs";
 
@@ -54,19 +54,19 @@ export async function POST(req: NextRequest) {
 
   const { data: prompt } = await supabase
     .from("prompts")
-    .select("id, creator_id, price_sol, status")
+    .select("id, creator_id, price_usd, status")
     .eq("id", prompt_id)
     .single();
   if (!prompt || prompt.status !== "active") {
     return NextResponse.json({ error: "Prompt not available" }, { status: 404 });
   }
-  if (Number(prompt.price_sol) <= 0) {
+  if (Number(prompt.price_usd) <= 0) {
     return NextResponse.json(
       { error: "Free prompts use the unlock-free endpoint" },
       { status: 400 }
     );
   }
-  if (Number(prompt.price_sol) < PROMPT_LIMITS.price.minPaid) {
+  if (Number(prompt.price_usd) < PROMPT_LIMITS.price.minPaid) {
     return NextResponse.json({ error: "Price below minimum" }, { status: 400 });
   }
   if (prompt.creator_id === buyer.id) {
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
   // so the UI can't fake a discount.
   let promoCodeId: string | null = null;
   let promoDiscountPercent: number | null = null;
-  let priceSol = Number(prompt.price_sol);
+  let priceUsd = Number(prompt.price_usd);
   if (promo_code) {
     const { data: promo } = await supabase
       .from("promo_codes")
@@ -126,10 +126,21 @@ export async function POST(req: NextRequest) {
     }
     promoCodeId = promo.id;
     promoDiscountPercent = promo.discount_percent;
-    priceSol = priceSol * (1 - promo.discount_percent / 100);
+    priceUsd = priceUsd * (1 - promo.discount_percent / 100);
   }
 
-  const total = solToLamports(priceSol);
+  // Convert USD to lamports using the live SOL/USD price. The intent
+  // pins the lamport amount so the buyer's wallet sees the same total
+  // they were quoted, even if the SOL price moves between confirm and
+  // settlement.
+  const solUsd = await fetchSolUsdPriceServer();
+  if (!solUsd) {
+    return NextResponse.json(
+      { error: "Live SOL price unavailable. Try again in a moment." },
+      { status: 503 }
+    );
+  }
+  const total = usdToLamports(priceUsd, solUsd);
   const { creatorLamports, platformLamports } = splitLamports(total);
   const reference = generatePurchaseReference();
 

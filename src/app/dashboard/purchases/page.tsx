@@ -18,8 +18,8 @@ export default async function MyPurchasesPage() {
       `
       id, created_at,
       prompt:prompts!inner (
-        id, title, price_sol, avg_rating, rating_count, favorite_count,
-        creator:users!creator_id ( username ),
+        id, title, price_usd, price_sol, avg_rating, rating_count, favorite_count, purchase_count,
+        creator:users!creator_id ( username, avatar_url ),
         images:prompt_images ( image_url, position, width, height )
       )
     `
@@ -43,14 +43,17 @@ export default async function MyPurchasesPage() {
       card: {
         id: p.id,
         title: p.title,
+        price_usd: Number(p.price_usd ?? 0),
         price_sol: Number(p.price_sol),
         avg_rating: p.avg_rating === null ? null : Number(p.avg_rating),
         rating_count: p.rating_count,
         favorite_count: p.favorite_count ?? 0,
+        purchase_count: p.purchase_count ?? 0,
         cover_image: cover?.image_url ?? null,
         cover_width: cover?.width ?? null,
         cover_height: cover?.height ?? null,
         creator_username: creator?.username ?? "unknown",
+        creator_avatar_url: (creator as { avatar_url?: string | null } | null)?.avatar_url ?? null,
       },
     };
   });

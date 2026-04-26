@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { HighlightablePromptInput } from "@/components/highlightable-prompt-input";
 import { PROMPT_LIMITS } from "@/lib/constants";
-import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
+import { useSolPrice } from "@/hooks/use-sol-price";
+import { formatSol } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import type { Category, Platform } from "@/lib/supabase/types";
 
@@ -18,7 +19,7 @@ type Initial = {
   title: string;
   description: string;
   prompt_text: string;
-  price_sol: number;
+  price_usd: number;
   category_id: number | null;
   platform_ids: number[];
 };
@@ -41,7 +42,7 @@ export function EditPromptForm({
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description);
   const [promptText, setPromptText] = useState(initial.prompt_text);
-  const [priceSol, setPriceSol] = useState(String(initial.price_sol));
+  const [priceUsd, setPriceUsd] = useState(String(initial.price_usd));
   const [categoryId, setCategoryId] = useState<number | null>(initial.category_id);
   const [platformIds, setPlatformIds] = useState<number[]>(initial.platform_ids);
   const [submitting, setSubmitting] = useState(false);
@@ -53,13 +54,13 @@ export function EditPromptForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const price = parseFloat(priceSol);
+    const price = parseFloat(priceUsd);
     if (Number.isNaN(price) || price < 0 || price > PROMPT_LIMITS.price.max) {
       toast.error("Invalid price");
       return;
     }
     if (price > 0 && price < PROMPT_LIMITS.price.minPaid) {
-      toast.error(`Paid prompts must be at least ${PROMPT_LIMITS.price.minPaid} SOL`);
+      toast.error(`Paid prompts must be at least $${PROMPT_LIMITS.price.minPaid}`);
       return;
     }
 
@@ -74,7 +75,7 @@ export function EditPromptForm({
           title,
           description,
           prompt_text: promptText,
-          price_sol: price,
+          price_usd: price,
           category_id: categoryId,
           platform_ids: platformIds,
         }),
@@ -176,25 +177,30 @@ export function EditPromptForm({
       </div>
 
       <div>
-        <Label htmlFor="price">Price in SOL (0 for free)</Label>
+        <Label htmlFor="price">Price in USD (0 for free)</Label>
         <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
+            $
+          </span>
           <Input
             id="price"
             type="number"
             min="0"
             max={PROMPT_LIMITS.price.max}
-            step="0.001"
-            value={priceSol}
-            onChange={(e) => setPriceSol(e.target.value)}
+            step="0.01"
+            value={priceUsd}
+            onChange={(e) => setPriceUsd(e.target.value)}
+            className="pl-7 pr-24"
           />
           {(() => {
-            const p = parseFloat(priceSol);
-            const dollars = Number.isFinite(p) ? solToUsdString(p, usd) : "";
-            return dollars ? (
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                ≈ {dollars}
+            const p = parseFloat(priceUsd);
+            if (!Number.isFinite(p) || p <= 0 || !usd) return null;
+            const sol = p / usd;
+            return (
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums text-muted-foreground">
+                ≈ {formatSol(sol)} SOL
               </span>
-            ) : null;
+            );
           })()}
         </div>
       </div>
