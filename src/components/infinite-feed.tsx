@@ -7,6 +7,8 @@ import { PromptCard, PromptMasonry, type PromptCardData } from "./prompt-card";
 type FilterParams = {
   sort?: "newest" | "trending" | "top";
   price?: "all" | "free" | "paid";
+  priceMin?: number;
+  priceMax?: number;
   category?: string;
   platform?: string;
   creator?: string;
@@ -58,6 +60,8 @@ export function InfiniteFeed({
       const params = new URLSearchParams();
       if (filters.sort) params.set("sort", filters.sort);
       if (filters.price) params.set("price", filters.price);
+      if (filters.priceMin) params.set("min", String(filters.priceMin));
+      if (filters.priceMax) params.set("max", String(filters.priceMax));
       if (filters.category) params.set("category", filters.category);
       if (filters.platform) params.set("platform", filters.platform);
       if (filters.creator) params.set("creator", filters.creator);

@@ -16,12 +16,18 @@ export async function GET(req: NextRequest) {
   const platform = url.searchParams.get("platform") ?? undefined;
   const creatorId = url.searchParams.get("creator") ?? undefined;
   const search = url.searchParams.get("q") ?? undefined;
+  const priceMinParam = url.searchParams.get("min");
+  const priceMaxParam = url.searchParams.get("max");
+  const priceMin = priceMinParam ? parseFloat(priceMinParam) : undefined;
+  const priceMax = priceMaxParam ? parseFloat(priceMaxParam) : undefined;
   const limit = Math.min(48, Math.max(1, parseInt(url.searchParams.get("limit") ?? "24", 10)));
   const offset = Math.max(0, parseInt(url.searchParams.get("offset") ?? "0", 10));
 
   const items = await fetchPromptCards({
     orderBy: sort,
     priceFilter: price,
+    priceMin,
+    priceMax,
     categorySlug: category,
     platformSlug: platform,
     creatorId,

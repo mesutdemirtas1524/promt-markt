@@ -3,6 +3,7 @@ import { fetchPromptCards, fetchCategories, fetchPlatforms } from "@/lib/queries
 import { InfiniteFeed } from "@/components/infinite-feed";
 import { getServerT } from "@/lib/i18n/server";
 import { ExploreSearchInput } from "./search-input";
+import { PriceRangeFilter } from "./price-range";
 
 export const revalidate = 60;
 
@@ -12,6 +13,8 @@ type SearchParams = {
   category?: string;
   platform?: string;
   q?: string;
+  min?: string;
+  max?: string;
 };
 
 export default async function ExplorePage({
@@ -23,6 +26,8 @@ export default async function ExplorePage({
   const sort = sp.sort ?? "newest";
   const price = sp.price ?? "all";
   const search = sp.q?.trim() ?? "";
+  const priceMin = sp.min ? parseFloat(sp.min) : undefined;
+  const priceMax = sp.max ? parseFloat(sp.max) : undefined;
 
   const { t } = await getServerT();
   const PAGE_SIZE = 24;
@@ -30,6 +35,8 @@ export default async function ExplorePage({
     fetchPromptCards({
       orderBy: sort,
       priceFilter: price,
+      priceMin,
+      priceMax,
       categorySlug: sp.category,
       platformSlug: sp.platform,
       search: search || undefined,
@@ -49,7 +56,7 @@ export default async function ExplorePage({
         <ExploreSearchInput initialValue={search} preserve={sp} placeholder={t("explore.search")} />
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-1.5">
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
         <Chip href={buildHref(sp, { sort: "newest" })} active={sort === "newest"}>{t("filter.newest")}</Chip>
         <Chip href={buildHref(sp, { sort: "trending" })} active={sort === "trending"}>{t("filter.trending")}</Chip>
         <Chip href={buildHref(sp, { sort: "top" })} active={sort === "top"}>{t("filter.topRated")}</Chip>
@@ -57,6 +64,8 @@ export default async function ExplorePage({
         <Chip href={buildHref(sp, { price: "all" })} active={price === "all"}>{t("filter.all")}</Chip>
         <Chip href={buildHref(sp, { price: "free" })} active={price === "free"}>{t("filter.free")}</Chip>
         <Chip href={buildHref(sp, { price: "paid" })} active={price === "paid"}>{t("filter.paid")}</Chip>
+        <span className="mx-2 my-auto h-5 w-px bg-border" />
+        <PriceRangeFilter initialMin={sp.min} initialMax={sp.max} preserve={sp} />
       </div>
 
       <div className="mb-3 flex flex-wrap gap-1.5">
@@ -114,6 +123,8 @@ export default async function ExplorePage({
           filters={{
             sort,
             price,
+            priceMin,
+            priceMax,
             category: sp.category,
             platform: sp.platform,
             q: search || undefined,

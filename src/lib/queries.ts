@@ -15,6 +15,8 @@ export async function fetchPromptCards(opts: {
   platformSlug?: string;
   creatorId?: string;
   priceFilter?: "free" | "paid" | "all";
+  priceMin?: number;
+  priceMax?: number;
   search?: string;
   includeRemoved?: boolean;
 }): Promise<PromptCardData[]> {
@@ -38,6 +40,12 @@ export async function fetchPromptCards(opts: {
   if (opts.creatorId) query = query.eq("creator_id", opts.creatorId);
   if (opts.priceFilter === "free") query = query.eq("price_sol", 0);
   if (opts.priceFilter === "paid") query = query.gt("price_sol", 0);
+  if (typeof opts.priceMin === "number" && opts.priceMin > 0) {
+    query = query.gte("price_sol", opts.priceMin);
+  }
+  if (typeof opts.priceMax === "number" && opts.priceMax < 10) {
+    query = query.lte("price_sol", opts.priceMax);
+  }
 
   const searchTerm = opts.search?.trim();
   if (searchTerm) {

@@ -1,3 +1,13 @@
+export type SocialLinks = {
+  twitter?: string;
+  instagram?: string;
+  website?: string;
+  discord?: string;
+  youtube?: string;
+  tiktok?: string;
+  github?: string;
+};
+
 export type User = {
   id: string;
   privy_id: string;
@@ -5,7 +15,11 @@ export type User = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   bio: string | null;
+  social_links: SocialLinks;
+  follower_count?: number;
+  following_count?: number;
   created_at: string;
   updated_at: string;
 };

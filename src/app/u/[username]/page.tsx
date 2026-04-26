@@ -10,7 +10,9 @@ import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { InfiniteFeed } from "@/components/infinite-feed";
 import { FollowButton } from "@/components/follow-button";
 import { TipButton } from "@/components/tip-button";
+import { SocialLinksRow } from "@/components/social-links";
 import { shortAddress } from "@/lib/utils";
+import type { SocialLinks } from "@/lib/supabase/types";
 
 export const revalidate = 120;
 
@@ -64,7 +66,7 @@ export default async function UserProfilePage({
   const { data: user } = await supabase
     .from("users")
     .select(
-      "id, username, display_name, bio, avatar_url, wallet_address, created_at, follower_count, following_count"
+      "id, username, display_name, bio, avatar_url, banner_url, social_links, wallet_address, created_at, follower_count, following_count"
     )
     .eq("username", username)
     .maybeSingle();
@@ -84,16 +86,28 @@ export default async function UserProfilePage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-      {/* Profile header */}
-      <div className="relative mb-10 overflow-hidden rounded-2xl border border-border p-7 sm:p-9">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 50% 50% at 0% 0%, rgba(167, 139, 250, 0.10), transparent 60%)",
-          }}
-        />
-        <div className="relative flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+      {/* Profile header — banner + content */}
+      <div className="relative mb-10 overflow-hidden rounded-2xl border border-border">
+        {user.banner_url ? (
+          <div className="relative h-40 w-full sm:h-52">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={user.banner_url}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
+          </div>
+        ) : (
+          <div
+            className="h-20 w-full"
+            style={{
+              background:
+                "radial-gradient(ellipse 50% 80% at 50% 100%, rgba(167, 139, 250, 0.18), transparent 70%)",
+            }}
+          />
+        )}
+        <div className="relative flex flex-col items-start gap-5 p-7 sm:flex-row sm:items-center sm:p-9">
           <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-white/10">
             {user.avatar_url && (
               <Image
@@ -121,12 +135,15 @@ export default async function UserProfilePage({
               </span>
             </div>
             {user.bio && <p className="mt-3 max-w-2xl text-sm leading-relaxed">{user.bio}</p>}
-            {user.wallet_address && (
-              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-tint-1 px-2.5 py-1 font-mono text-[10.5px] tracking-tight text-muted-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                {shortAddress(user.wallet_address, 6)}
-              </div>
-            )}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <SocialLinksRow links={(user.social_links ?? null) as SocialLinks | null} />
+              {user.wallet_address && (
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-tint-1 px-2.5 py-1 font-mono text-[10.5px] tracking-tight text-muted-foreground">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  {shortAddress(user.wallet_address, 6)}
+                </div>
+              )}
+            </div>
           </div>
 
           {viewer && viewer.id !== user.id && (

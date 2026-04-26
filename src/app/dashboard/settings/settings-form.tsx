@@ -25,9 +25,21 @@ export function SettingsForm({ user }: { user: User }) {
   const [displayName, setDisplayName] = useState(user.display_name ?? "");
   const [bio, setBio] = useState(user.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatar_url ?? null);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(user.banner_url ?? null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [social, setSocial] = useState({
+    twitter: user.social_links?.twitter ?? "",
+    instagram: user.social_links?.instagram ?? "",
+    website: user.social_links?.website ?? "",
+    discord: user.social_links?.discord ?? "",
+    youtube: user.social_links?.youtube ?? "",
+    tiktok: user.social_links?.tiktok ?? "",
+    github: user.social_links?.github ?? "",
+  });
   const [saving, setSaving] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const bannerInput = useRef<HTMLInputElement>(null);
 
   // Live availability state for the username field
   type UsernameStatus = "idle" | "checking" | "ok" | "taken" | "format" | "self";
@@ -106,6 +118,44 @@ export function SettingsForm({ user }: { user: User }) {
     }
   }
 
+  async function handleBannerPick(file: File) {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_IMAGE_TYPES)[number])) {
+      toast.error("Use PNG, JPG, or WEBP");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Banner must be 4MB or smaller");
+      return;
+    }
+    setUploadingBanner(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Auth token missing");
+      const signRes = await fetch("/api/user/banner/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: file.name, type: file.type, size: file.size }),
+      });
+      if (!signRes.ok) throw new Error((await signRes.json()).error ?? "Could not sign upload");
+      const { signedUrl, publicUrl } = (await signRes.json()) as {
+        signedUrl: string;
+        publicUrl: string;
+      };
+      const putRes = await fetch(signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error("Upload failed");
+      setBannerUrl(`${publicUrl}?t=${Date.now()}`);
+      toast.success("Banner ready — click Save changes to apply.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setUploadingBanner(false);
+    }
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -119,6 +169,8 @@ export function SettingsForm({ user }: { user: User }) {
           display_name: displayName,
           bio,
           avatar_url: avatarUrl ? avatarUrl.split("?")[0] : null,
+          banner_url: bannerUrl ? bannerUrl.split("?")[0] : null,
+          social_links: social,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Save failed");
@@ -204,6 +256,74 @@ export function SettingsForm({ user }: { user: User }) {
             </div>
           </div>
 
+          {/* Banner */}
+          <div>
+            <Label className="mb-2 block">Profile banner</Label>
+            <div className="space-y-2">
+              <div className="relative aspect-[4/1] w-full overflow-hidden rounded-lg border border-border bg-tint-1">
+                {bannerUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={bannerUrl}
+                    alt="Banner"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                    Banner appears at the top of your public profile.
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => bannerInput.current?.click()}
+                  disabled={uploadingBanner}
+                >
+                  {uploadingBanner ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Uploading…
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      {bannerUrl ? "Change banner" : "Upload banner"}
+                    </>
+                  )}
+                </Button>
+                {bannerUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setBannerUrl(null)}
+                    disabled={uploadingBanner}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Remove
+                  </Button>
+                )}
+                <span className="self-center text-xs text-muted-foreground">
+                  PNG, JPG, or WEBP · Max 4MB · 4:1 ratio looks best
+                </span>
+              </div>
+              <input
+                ref={bannerInput}
+                type="file"
+                accept={ACCEPTED_IMAGE_TYPES.join(",")}
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleBannerPick(f);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="username">Username</Label>
             <div className="relative">
@@ -267,6 +387,44 @@ export function SettingsForm({ user }: { user: User }) {
               rows={3}
             />
             <p className="mt-1 text-xs text-muted-foreground">{bio.length}/280</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 p-6">
+          <div>
+            <h3 className="text-sm font-semibold tracking-tight">Social links</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Shown on your public profile. Just the username, full URL, or
+              handle — we&apos;ll figure it out.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(
+              [
+                { key: "twitter", label: "Twitter / X", placeholder: "@yourname" },
+                { key: "instagram", label: "Instagram", placeholder: "@yourname" },
+                { key: "tiktok", label: "TikTok", placeholder: "@yourname" },
+                { key: "youtube", label: "YouTube", placeholder: "@yourchannel" },
+                { key: "discord", label: "Discord", placeholder: "yourname or invite link" },
+                { key: "github", label: "GitHub", placeholder: "yourname" },
+                { key: "website", label: "Website", placeholder: "https://example.com" },
+              ] as const
+            ).map((field) => (
+              <div key={field.key}>
+                <Label htmlFor={`social-${field.key}`}>{field.label}</Label>
+                <Input
+                  id={`social-${field.key}`}
+                  value={social[field.key]}
+                  onChange={(e) =>
+                    setSocial((prev) => ({ ...prev, [field.key]: e.target.value }))
+                  }
+                  placeholder={field.placeholder}
+                  maxLength={field.key === "website" ? 200 : 120}
+                />
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
