@@ -5,8 +5,11 @@ import { notFound } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { fetchPromptCards, fetchFavoritedPrompts } from "@/lib/queries";
 import { getServerT } from "@/lib/i18n/server";
+import { getCurrentUser } from "@/lib/auth";
 import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { InfiniteFeed } from "@/components/infinite-feed";
+import { FollowButton } from "@/components/follow-button";
+import { TipButton } from "@/components/tip-button";
 import { shortAddress } from "@/lib/utils";
 
 export const revalidate = 120;
@@ -60,12 +63,15 @@ export default async function UserProfilePage({
   const supabase = createSupabaseServiceClient();
   const { data: user } = await supabase
     .from("users")
-    .select("id, username, display_name, bio, avatar_url, wallet_address, created_at")
+    .select(
+      "id, username, display_name, bio, avatar_url, wallet_address, created_at, follower_count, following_count"
+    )
     .eq("username", username)
     .maybeSingle();
   if (!user) notFound();
 
   const { t } = await getServerT();
+  const viewer = await getCurrentUser();
   const PAGE_SIZE = 24;
   const [prompts, favorites] = await Promise.all([
     tab === "prompts"
@@ -104,6 +110,16 @@ export default async function UserProfilePage({
               {user.display_name ?? `@${user.username}`}
             </h1>
             <p className="text-sm text-muted-foreground">@{user.username}</p>
+            <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+              <span>
+                <span className="font-semibold text-foreground tabular-nums">{user.follower_count ?? 0}</span>{" "}
+                followers
+              </span>
+              <span>
+                <span className="font-semibold text-foreground tabular-nums">{user.following_count ?? 0}</span>{" "}
+                following
+              </span>
+            </div>
             {user.bio && <p className="mt-3 max-w-2xl text-sm leading-relaxed">{user.bio}</p>}
             {user.wallet_address && (
               <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-tint-1 px-2.5 py-1 font-mono text-[10.5px] tracking-tight text-muted-foreground">
@@ -112,6 +128,23 @@ export default async function UserProfilePage({
               </div>
             )}
           </div>
+
+          {viewer && viewer.id !== user.id && (
+            <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+              <FollowButton
+                targetUserId={user.id}
+                targetUsername={user.username}
+                hideForSelfId={viewer.id}
+              />
+              {user.wallet_address && (
+                <TipButton
+                  creatorWallet={user.wallet_address}
+                  creatorUsername={user.username}
+                  size="sm"
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
 

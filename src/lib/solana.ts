@@ -194,3 +194,52 @@ export async function verifyPurchaseTransaction(params: {
 
   return { ok: true };
 }
+
+/**
+ * Verifier for a single-recipient transfer (tips). Confirms the signed
+ * tx exists, buyer signed, and the recipient received exactly the
+ * expected lamports (1-lamport rounding tolerance).
+ */
+export async function verifySingleTransferTransaction(params: {
+  signature: string;
+  expectedFrom: string;
+  expectedTo: string;
+  expectedLamports: number;
+}): Promise<{ ok: boolean; reason?: string }> {
+  const connection = getSolanaConnection();
+  const maxAttempts = 8;
+  let parsed = null;
+  for (let i = 0; i < maxAttempts; i++) {
+    parsed = await connection.getParsedTransaction(params.signature, {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    });
+    if (parsed) break;
+    await new Promise((r) => setTimeout(r, 2_000));
+  }
+  if (!parsed) return { ok: false, reason: "Transaction not found." };
+  if (parsed.meta?.err) return { ok: false, reason: "Transaction failed on-chain." };
+
+  let signed = false;
+  for (const k of parsed.transaction.message.accountKeys) {
+    if (k.pubkey.toBase58() === params.expectedFrom && k.signer) signed = true;
+  }
+  if (!signed) return { ok: false, reason: "Sender did not sign this transaction." };
+
+  let total = 0;
+  for (const ix of parsed.transaction.message.instructions) {
+    if ("parsed" in ix && ix.program === "system" && ix.parsed?.type === "transfer") {
+      const info = ix.parsed.info as { source: string; destination: string; lamports: number };
+      if (info.source === params.expectedFrom && info.destination === params.expectedTo) {
+        total += info.lamports;
+      }
+    }
+  }
+  if (Math.abs(total - params.expectedLamports) > 1) {
+    return {
+      ok: false,
+      reason: `Recipient got ${total} lamports, expected ${params.expectedLamports}.`,
+    };
+  }
+  return { ok: true };
+}

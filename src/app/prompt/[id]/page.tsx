@@ -7,6 +7,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { getServerT } from "@/lib/i18n/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { PromptCard, PromptMasonry } from "@/components/prompt-card";
+import { FollowButton } from "@/components/follow-button";
+import { TipButton } from "@/components/tip-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PromptDetailActions } from "@/components/prompt-detail-actions";
@@ -130,37 +132,54 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
           </div>
 
           {/* Creator */}
-          <Link
-            href={`/u/${prompt.creator.username}`}
-            className="flex items-center gap-3 rounded-xl border border-border bg-tint-1 p-3 transition-all hover:bg-tint-2"
-          >
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
-              {prompt.creator.avatar_url && (
-                <Image
-                  src={prompt.creator.avatar_url}
-                  alt={prompt.creator.display_name ?? prompt.creator.username}
-                  fill
-                  sizes="40px"
-                  className="object-cover"
+          <div className="rounded-xl border border-border bg-tint-1 p-3 transition-all hover:bg-tint-2">
+            <Link href={`/u/${prompt.creator.username}`} className="flex items-center gap-3">
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
+                {prompt.creator.avatar_url && (
+                  <Image
+                    src={prompt.creator.avatar_url}
+                    alt={prompt.creator.display_name ?? prompt.creator.username}
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                  />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium tracking-tight">
+                  {prompt.creator.display_name ?? `@${prompt.creator.username}`}
+                </div>
+                {prompt.creator.display_name && (
+                  <div className="truncate text-xs text-muted-foreground">@{prompt.creator.username}</div>
+                )}
+                <div className="text-[11px] text-muted-foreground">
+                  {formatRelativeTime(prompt.created_at)} · {prompt.purchase_count} {t("detail.sales")}
+                </div>
+                <div className="mt-1 text-[11px] text-muted-foreground">
+                  <span className="text-foreground">{creatorStats.activePrompts}</span> prompts ·{" "}
+                  <span className="text-foreground">{creatorStats.totalSales}</span> total sales
+                </div>
+              </div>
+            </Link>
+            {!isOwnPrompt && (
+              <div className="mt-3 flex items-center gap-2">
+                <FollowButton
+                  targetUserId={prompt.creator.id}
+                  targetUsername={prompt.creator.username}
+                  hideForSelfId={viewer?.id ?? null}
+                  size="sm"
+                  className="flex-1 justify-center"
                 />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium tracking-tight">
-                {prompt.creator.display_name ?? `@${prompt.creator.username}`}
+                {prompt.creator.wallet_address && (
+                  <TipButton
+                    creatorWallet={prompt.creator.wallet_address}
+                    creatorUsername={prompt.creator.username}
+                    size="sm"
+                  />
+                )}
               </div>
-              {prompt.creator.display_name && (
-                <div className="truncate text-xs text-muted-foreground">@{prompt.creator.username}</div>
-              )}
-              <div className="text-[11px] text-muted-foreground">
-                {formatRelativeTime(prompt.created_at)} · {prompt.purchase_count} {t("detail.sales")}
-              </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
-                <span className="text-foreground">{creatorStats.activePrompts}</span> prompts ·{" "}
-                <span className="text-foreground">{creatorStats.totalSales}</span> total sales
-              </div>
-            </div>
-          </Link>
+            )}
+          </div>
 
           {/* Stats row */}
           <div className="grid grid-cols-3 gap-2">

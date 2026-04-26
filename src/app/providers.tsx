@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { CurrentUserProvider } from "@/hooks/use-current-user";
 import { SolPriceProvider } from "@/hooks/use-sol-price";
 import { FavoritesProvider } from "@/hooks/use-favorites";
+import { FollowingProvider } from "@/hooks/use-following";
 import { ThemeProvider } from "@/lib/theme/provider";
 import { LocaleProvider } from "@/lib/i18n/provider";
 
@@ -53,10 +54,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <CurrentUserProvider>
         <FavoritesProvider>
-          <SolPriceProvider>
-            {children}
-            <Toaster position="bottom-right" />
-          </SolPriceProvider>
+          <FollowingProvider>
+            <SolPriceProvider>
+              {children}
+              <Toaster position="bottom-right" />
+            </SolPriceProvider>
+          </FollowingProvider>
         </FavoritesProvider>
       </CurrentUserProvider>
     </PrivyProvider>
