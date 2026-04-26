@@ -3,6 +3,7 @@
  * library dependency — just CSS-styled rects sized by ratio. Works
  * inside server components.
  */
+import { SolLogo } from "./sol-logo";
 
 export type DailyPoint = { date: string; count: number; volumeSol: number };
 
@@ -37,9 +38,10 @@ export function SalesChart({
           <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             {metric === "count" ? "Sales" : "Volume"} · last {data.length}d
           </div>
-          <div className="mt-1 text-2xl font-bold tabular-nums">
+          <div className="mt-1 inline-flex items-center gap-1.5 text-2xl font-bold tabular-nums">
+            {metric === "volume" && <SolLogo className="h-4 w-4" />}
             {metric === "count" ? total : formatSol(total)}
-            {metric === "volume" && <span className="ml-1 text-sm font-medium opacity-60">SOL</span>}
+            {metric === "volume" && <span className="text-sm font-medium opacity-60">SOL</span>}
           </div>
         </div>
       </div>

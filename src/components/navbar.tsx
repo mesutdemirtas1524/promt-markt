@@ -13,6 +13,7 @@ import { useT } from "@/lib/i18n/provider";
 import { ThemeToggle } from "./theme-toggle";
 import { LocaleSwitcher } from "./locale-switcher";
 import { NotificationsBell } from "./notifications-bell";
+import { SolLogo } from "./sol-logo";
 
 function formatSolBalance(sol: number): string {
   if (sol >= 100) return sol.toFixed(2);
@@ -102,7 +103,8 @@ export function Navbar() {
 
               {dbUser?.wallet_address && balance !== null && (
                 <div className="hidden rounded-lg border border-border bg-tint-1 px-2.5 py-1 text-right text-[11px] leading-tight md:block">
-                  <div className="font-semibold tabular-nums text-foreground">
+                  <div className="inline-flex items-center gap-1 font-semibold tabular-nums text-foreground">
+                    <SolLogo className="h-2.5 w-2.5" />
                     {formatSolBalance(balance)} <span className="opacity-60">SOL</span>
                   </div>
                   {balanceUsd && (

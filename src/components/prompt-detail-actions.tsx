@@ -18,6 +18,7 @@ import { useT } from "@/lib/i18n/provider";
 import { PromptText } from "./prompt-text";
 import type { PromptAnalysis } from "@/lib/prompt-analysis";
 import { Hash, Type, Sparkles as SparklesIcon } from "lucide-react";
+import { SolLogo } from "./sol-logo";
 
 type Props = {
   promptId: string;
@@ -334,9 +335,18 @@ export function PromptDetailActions(props: Props) {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex items-center gap-2 rounded-full border border-zinc-700/50 bg-zinc-900/85 px-3.5 py-1.5 text-xs text-zinc-100 backdrop-blur">
                 <Lock className="h-3.5 w-3.5" />
-                {isFree
-                  ? t("detail.signInToUnlock")
-                  : `${t("detail.unlockFor")} ${formatUsd(props.priceUsd)}${displaySol > 0 ? ` · ${formatSol(displaySol)} SOL` : ""}`}
+                {isFree ? (
+                  t("detail.signInToUnlock")
+                ) : (
+                  <>
+                    {t("detail.unlockFor")} {formatUsd(props.priceUsd)}
+                    {displaySol > 0 && (
+                      <span className="inline-flex items-center gap-1 opacity-80">
+                        · <SolLogo className="h-3 w-3" /> {formatSol(displaySol)} SOL
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -444,7 +454,9 @@ export function PromptDetailActions(props: Props) {
             <>
               {t("detail.buyFor")} {formatUsd(effectivePriceUsd)}
               {effectiveSol > 0 && (
-                <span className="opacity-70">· {formatSol(effectiveSol)} SOL</span>
+                <span className="inline-flex items-center gap-1 opacity-70">
+                  · <SolLogo className="h-3 w-3" /> {formatSol(effectiveSol)} SOL
+                </span>
               )}
               <span className="ml-1.5 text-xs line-through opacity-50">
                 {formatUsd(props.priceUsd)}
@@ -454,7 +466,9 @@ export function PromptDetailActions(props: Props) {
             <>
               {t("detail.buyFor")} {formatUsd(props.priceUsd)}
               {displaySol > 0 && (
-                <span className="opacity-70">· {formatSol(displaySol)} SOL</span>
+                <span className="inline-flex items-center gap-1 opacity-70">
+                  · <SolLogo className="h-3 w-3" /> {formatSol(displaySol)} SOL
+                </span>
               )}
             </>
           )}

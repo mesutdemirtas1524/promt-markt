@@ -13,6 +13,7 @@ import { PROMPT_LIMITS } from "@/lib/constants";
 import { useSolPrice } from "@/hooks/use-sol-price";
 import { formatSol } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { SolLogo } from "@/components/sol-logo";
 import type { Category, Platform } from "@/lib/supabase/types";
 
 type Initial = {
@@ -197,8 +198,8 @@ export function EditPromptForm({
             if (!Number.isFinite(p) || p <= 0 || !usd) return null;
             const sol = p / usd;
             return (
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums text-muted-foreground">
-                ≈ {formatSol(sol)} SOL
+              <span className="pointer-events-none absolute right-3 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 text-xs tabular-nums text-muted-foreground">
+                ≈ <SolLogo className="h-3 w-3" /> {formatSol(sol)} SOL
               </span>
             );
           })()}

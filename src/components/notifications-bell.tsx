@@ -8,6 +8,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { Bell, Heart, UserPlus, ShoppingBag, Coins, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime, formatSol } from "@/lib/utils";
+import { SolLogo } from "./sol-logo";
 
 type Actor = { username: string; display_name: string | null; avatar_url: string | null } | null;
 type Prompt = { id: string; title: string } | null;
@@ -224,7 +225,8 @@ function NotificationRow({
         <>
           <strong className="text-foreground">{actorName}</strong> bought{" "}
           <span className="text-foreground">{n.prompt?.title ?? "your prompt"}</span> for{" "}
-          <span className="font-semibold tabular-nums text-emerald-300">
+          <span className="inline-flex items-center gap-1 font-semibold tabular-nums text-emerald-300">
+            <SolLogo className="h-3 w-3" />
             {formatSol(Number(n.amount_sol ?? 0))} SOL
           </span>
         </>
@@ -235,7 +237,8 @@ function NotificationRow({
       body = (
         <>
           <strong className="text-foreground">{actorName}</strong> tipped{" "}
-          <span className="font-semibold tabular-nums text-amber-300">
+          <span className="inline-flex items-center gap-1 font-semibold tabular-nums text-amber-300">
+            <SolLogo className="h-3 w-3" />
             {formatSol(Number(n.amount_sol ?? 0))} SOL
           </span>
           {n.message && <span className="block text-muted-foreground">&ldquo;{n.message}&rdquo;</span>}

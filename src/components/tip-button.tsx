@@ -10,6 +10,7 @@ import { Coins, Loader2, X } from "lucide-react";
 import { SOLANA_RPC_URL, SOLANA_NETWORK } from "@/lib/constants";
 import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
 import { cn } from "@/lib/utils";
+import { SolLogo } from "./sol-logo";
 
 const PRESETS = [0.01, 0.05, 0.1, 0.5];
 
@@ -218,8 +219,9 @@ export function TipButton({ creatorWallet, creatorUsername, size = "md", classNa
               className="mb-1 h-10 w-full rounded-lg border border-input bg-tint-1 px-3 text-sm tabular-nums focus-visible:border-foreground/30 focus-visible:bg-tint-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             />
             {validAmount && (
-              <p className="mb-3 text-[11px] text-muted-foreground">
-                {finalAmount} SOL{usd && ` · ${solToUsdString(finalAmount, usd)}`}
+              <p className="mb-3 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                <SolLogo className="h-3 w-3" /> {finalAmount} SOL
+                {usd && ` · ${solToUsdString(finalAmount, usd)}`}
               </p>
             )}
 
@@ -249,7 +251,15 @@ export function TipButton({ creatorWallet, creatorUsername, size = "md", classNa
               ) : (
                 <>
                   <Coins className="h-4 w-4" />
-                  Send {validAmount ? `${finalAmount} SOL` : "tip"}
+                  Send{" "}
+                  {validAmount ? (
+                    <span className="inline-flex items-center gap-1">
+                      <SolLogo className="h-3.5 w-3.5" />
+                      {finalAmount} SOL
+                    </span>
+                  ) : (
+                    "tip"
+                  )}
                 </>
               )}
             </button>

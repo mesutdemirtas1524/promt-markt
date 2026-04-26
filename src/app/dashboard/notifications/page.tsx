@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { Heart, UserPlus, ShoppingBag, Coins, Bell } from "lucide-react";
 import { formatRelativeTime, formatSol } from "@/lib/utils";
+import { SolLogo } from "@/components/sol-logo";
 
 export const dynamic = "force-dynamic";
 
@@ -123,7 +124,8 @@ function Row({ n }: { n: Row }) {
         <>
           <strong className="text-foreground">{actorName}</strong> bought{" "}
           <span className="text-foreground">{n.prompt?.title ?? "your prompt"}</span> for{" "}
-          <span className="font-semibold tabular-nums text-emerald-300">
+          <span className="inline-flex items-center gap-1 font-semibold tabular-nums text-emerald-300">
+            <SolLogo className="h-3 w-3" />
             {formatSol(Number(n.amount_sol ?? 0))} SOL
           </span>
         </>
@@ -134,7 +136,8 @@ function Row({ n }: { n: Row }) {
       body = (
         <>
           <strong className="text-foreground">{actorName}</strong> tipped{" "}
-          <span className="font-semibold tabular-nums text-amber-300">
+          <span className="inline-flex items-center gap-1 font-semibold tabular-nums text-amber-300">
+            <SolLogo className="h-3 w-3" />
             {formatSol(Number(n.amount_sol ?? 0))} SOL
           </span>
           {n.message && (

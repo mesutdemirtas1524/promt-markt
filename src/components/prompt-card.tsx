@@ -8,6 +8,7 @@ import { FavoriteButton } from "./favorite-button";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useSolPrice } from "@/hooks/use-sol-price";
 import { formatSol, formatUsd } from "@/lib/utils";
+import { SolLogo } from "./sol-logo";
 
 export type PromptCardData = {
   id: string;
@@ -78,8 +79,9 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
                   {formatUsd(prompt.price_usd)}
                 </span>
                 {solValue > 0 && (
-                  <span className="mt-0.5 text-[9px] tabular-nums opacity-70 leading-none">
-                    {formatSol(solValue)} SOL
+                  <span className="mt-0.5 inline-flex items-center gap-0.5 text-[9px] tabular-nums opacity-75 leading-none">
+                    <SolLogo className="h-2 w-2" />
+                    {formatSol(solValue)}
                   </span>
                 )}
               </span>

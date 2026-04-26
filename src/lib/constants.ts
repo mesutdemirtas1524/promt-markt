@@ -16,12 +16,12 @@ export const PROMPT_LIMITS = {
   title: { min: 5, max: 100 },
   description: { min: 10, max: 500 },
   promptText: { min: 10, max: 4000 },
-  // Pricing is now USD-first. minPaid is a floor that comfortably clears
-  // Solana's rent-exempt minimum even when SOL is at $50: $1 → ~0.02 SOL,
-  // creator's 80% share = 0.016 SOL ≈ 16M lamports, well above the
-  // ~890,880 lamport rent floor. Below $1 we'd start to risk failed
-  // transfers when SOL pumps higher (small lamport amounts).
-  price: { min: 0, max: 1000, minPaid: 1 },
+  // Pricing is USD-first. $0.15 is well below Solana's per-tx rent-exempt
+  // floor (~890,880 lamports ≈ ~$0.20 at SOL $250) for the creator's 80%
+  // share, so the first sale to a brand-new creator wallet may fail
+  // on-chain with "insufficient lamports for rent". Once a creator's
+  // wallet has received any SOL it's fine. Operator's call.
+  price: { min: 0, max: 1000, minPaid: 0.15 },
   images: { min: 1, max: 6 },
   imageSizeMB: 5,
   dailyListings: 10,

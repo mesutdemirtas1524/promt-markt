@@ -2,6 +2,7 @@
 
 import { formatSol, formatUsd } from "@/lib/utils";
 import { useSolPrice } from "@/hooks/use-sol-price";
+import { SolLogo } from "./sol-logo";
 
 /**
  * USD-first price display. Pass `usd` (the source-of-truth price set by
@@ -39,14 +40,24 @@ export function PriceTag({
     size === "xs" ? "text-xs" : size === "base" ? "text-base" : size === "lg" ? "text-lg" : "text-sm";
   const secondarySize = size === "lg" ? "text-sm" : size === "base" ? "text-xs" : "text-[10px]";
 
+  const iconSize =
+    size === "lg" ? "h-3 w-3" : size === "base" ? "h-2.5 w-2.5" : "h-2 w-2";
+
   return (
     <span className={`inline-flex items-baseline gap-1.5 ${className}`}>
-      <span className={primarySize + " font-semibold tabular-nums"}>
-        {usdValue !== null ? formatUsd(usdValue) : `${formatSol(solValue ?? 0)} SOL`}
+      <span className={primarySize + " font-semibold tabular-nums inline-flex items-baseline gap-1"}>
+        {usdValue !== null ? (
+          formatUsd(usdValue)
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <SolLogo className={iconSize} />
+            {formatSol(solValue ?? 0)} SOL
+          </span>
+        )}
       </span>
-      {!hideSecondary && solValue !== null && solValue > 0 && (
-        <span className={`${secondarySize} opacity-70 tabular-nums`}>
-          ≈ {formatSol(solValue)} SOL
+      {!hideSecondary && solValue !== null && solValue > 0 && usdValue !== null && (
+        <span className={`${secondarySize} opacity-70 tabular-nums inline-flex items-center gap-1`}>
+          ≈ <SolLogo className={iconSize} /> {formatSol(solValue)} SOL
         </span>
       )}
     </span>

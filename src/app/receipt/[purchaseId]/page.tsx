@@ -8,6 +8,7 @@ import { ShareButton } from "@/components/share-button";
 import { CheckCircle2, ExternalLink, Sparkles } from "lucide-react";
 import { formatSol, shortAddress, formatRelativeTime } from "@/lib/utils";
 import { SOLANA_NETWORK } from "@/lib/constants";
+import { SolLogo } from "@/components/sol-logo";
 
 export const dynamic = "force-dynamic";
 
@@ -174,7 +175,8 @@ export default async function ReceiptPage({
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <Field label="Paid">
-              <span className="font-semibold tabular-nums">
+              <span className="inline-flex items-center gap-1 font-semibold tabular-nums">
+                <SolLogo className="h-3.5 w-3.5" />
                 {formatSol(r.price_paid_sol)} SOL
               </span>
             </Field>
