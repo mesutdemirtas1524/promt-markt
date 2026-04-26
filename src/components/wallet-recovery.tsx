@@ -61,7 +61,7 @@ export function WalletRecovery({ variant = "card" }: Props) {
             </span>
           </div>
         </div>
-        <Button size="sm" variant="primary" onClick={() => setWalletRecovery()}>
+        <Button type="button" size="sm" variant="primary" onClick={() => setWalletRecovery()}>
           Set up recovery
         </Button>
       </div>
@@ -96,6 +96,7 @@ export function WalletRecovery({ variant = "card" }: Props) {
 
       <div className="flex flex-wrap gap-2">
         <Button
+          type="button"
           variant={isProtected ? "outline" : "primary"}
           onClick={() => setWalletRecovery()}
           className="gap-1.5"
@@ -103,7 +104,7 @@ export function WalletRecovery({ variant = "card" }: Props) {
           <ExternalLink className="h-3.5 w-3.5" />
           {isProtected ? "Change recovery method" : "Set up recovery"}
         </Button>
-        <Button variant="outline" onClick={() => exportWallet()} className="gap-1.5">
+        <Button type="button" variant="outline" onClick={() => exportWallet()} className="gap-1.5">
           <Key className="h-3.5 w-3.5" />
           Export private key
         </Button>
