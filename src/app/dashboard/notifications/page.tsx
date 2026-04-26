@@ -3,8 +3,9 @@ import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { Heart, UserPlus, ShoppingBag, Coins, Bell } from "lucide-react";
-import { formatRelativeTime, formatSol } from "@/lib/utils";
+import { formatSol } from "@/lib/utils";
 import { SolLogo } from "@/components/sol-logo";
+import { TimeAgo } from "@/components/time-ago";
 
 export const dynamic = "force-dynamic";
 
@@ -166,7 +167,7 @@ function Row({ n }: { n: Row }) {
         <div className="min-w-0 flex-1 text-sm leading-snug text-muted-foreground">
           <div>{body}</div>
           <div className="mt-1 text-[11px] text-muted-foreground/70">
-            {formatRelativeTime(n.created_at)}
+            <TimeAgo iso={n.created_at} />
           </div>
         </div>
       </Link>

@@ -22,7 +22,8 @@ import { FavoriteButton } from "@/components/favorite-button";
 import { OwnerActions } from "@/components/owner-actions";
 import { PromptGallery } from "@/components/image-lightbox";
 import { ViewTracker } from "@/components/view-tracker";
-import { formatRating, formatRelativeTime, formatUsd } from "@/lib/utils";
+import { formatRating, formatUsd } from "@/lib/utils";
+import { TimeAgo } from "@/components/time-ago";
 import { Pencil, Star, Heart, ShoppingBag } from "lucide-react";
 
 // Per-user state (isOwnPrompt, hasAccess, isFavorited) prevents safe ISR.
@@ -190,7 +191,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
                   <div className="truncate text-xs text-muted-foreground">@{prompt.creator.username}</div>
                 )}
                 <div className="text-[11px] text-muted-foreground">
-                  {formatRelativeTime(prompt.created_at)} · {prompt.purchase_count} {t("detail.sales")}
+                  <TimeAgo iso={prompt.created_at} /> · {prompt.purchase_count} {t("detail.sales")}
                 </div>
                 <div className="mt-1 text-[11px] text-muted-foreground">
                   <span className="text-foreground">{creatorStats.activePrompts}</span> prompts ·{" "}

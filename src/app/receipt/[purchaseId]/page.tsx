@@ -6,7 +6,8 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ShareButton } from "@/components/share-button";
 import { CheckCircle2, ExternalLink, Sparkles } from "lucide-react";
-import { formatSol, shortAddress, formatRelativeTime } from "@/lib/utils";
+import { formatSol, shortAddress } from "@/lib/utils";
+import { TimeAgo } from "@/components/time-ago";
 import { SOLANA_NETWORK } from "@/lib/constants";
 import { SolLogo } from "@/components/sol-logo";
 
@@ -158,7 +159,7 @@ export default async function ReceiptPage({
             ) : (
               creatorName
             )}{" "}
-            · {formatRelativeTime(r.created_at)}
+            · <TimeAgo iso={r.created_at} />
           </p>
 
           {cover && (

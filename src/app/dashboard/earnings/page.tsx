@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import { formatRelativeTime } from "@/lib/utils";
 import { CREATOR_SHARE_BPS } from "@/lib/constants";
 import { PriceTag } from "@/components/price-tag";
 import { SalesChart, bucketDailySales } from "@/components/sales-chart";
+import { TimeAgo } from "@/components/time-ago";
 
 export const dynamic = "force-dynamic";
 
@@ -212,7 +212,7 @@ export default async function EarningsPage() {
                         <PriceTag sol={(price * CREATOR_SHARE_BPS) / 10_000} size="xs" />
                       </td>
                       <td className="px-4 py-2 text-right text-muted-foreground">
-                        {formatRelativeTime(r.created_at)}
+                        <TimeAgo iso={r.created_at} />
                       </td>
                       <td className="px-4 py-2 text-right">
                         {r.tx_signature ? (
