@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { fetchPromptDetail } from "@/lib/queries";
+import { fetchPromptDetail, fetchCreatorStats, fetchPromptCards } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
 import { getServerT } from "@/lib/i18n/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PromptDetailActions } from "@/components/prompt-detail-actions";
@@ -76,8 +77,19 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
   if (!result) notFound();
   const { t } = await getServerT();
 
-  const { prompt, hasAccess, myRating, isOwnPrompt } = result;
+  const { prompt, hasAccess, myRating, isOwnPrompt, analysis } = result;
   const isRemoved = prompt.status === "removed";
+
+  // Side fetches for trust signals: creator's other prompts + cumulative stats
+  const [creatorStats, otherPrompts] = await Promise.all([
+    fetchCreatorStats(prompt.creator.id),
+    fetchPromptCards({
+      creatorId: prompt.creator.id,
+      orderBy: "newest",
+      limit: 8,
+    }),
+  ]);
+  const moreFromCreator = otherPrompts.filter((p) => p.id !== prompt.id).slice(0, 6);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
@@ -143,6 +155,10 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
               <div className="text-[11px] text-muted-foreground">
                 {formatRelativeTime(prompt.created_at)} · {prompt.purchase_count} {t("detail.sales")}
               </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                <span className="text-foreground">{creatorStats.activePrompts}</span> prompts ·{" "}
+                <span className="text-foreground">{creatorStats.totalSales}</span> total sales
+              </div>
             </div>
           </Link>
 
@@ -194,9 +210,34 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
             isOwnPrompt={isOwnPrompt}
             myRating={myRating}
             promptText={prompt.prompt_text}
+            analysis={analysis}
           />
         </div>
       </div>
+
+      {moreFromCreator.length > 0 && (
+        <section className="mt-16">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-base font-semibold tracking-tight">
+              More from{" "}
+              <Link href={`/u/${prompt.creator.username}`} className="text-violet-300 hover:underline">
+                {prompt.creator.display_name ?? `@${prompt.creator.username}`}
+              </Link>
+            </h2>
+            <Link
+              href={`/u/${prompt.creator.username}`}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              View profile →
+            </Link>
+          </div>
+          <PromptMasonry>
+            {moreFromCreator.map((p) => (
+              <PromptCard key={p.id} prompt={p} />
+            ))}
+          </PromptMasonry>
+        </section>
+      )}
     </div>
   );
 }

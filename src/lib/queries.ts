@@ -1,6 +1,7 @@
 import "server-only";
 import { createSupabaseServiceClient } from "./supabase/server";
 import type { PromptCardData } from "@/components/prompt-card";
+import { analyzePrompt, type PromptAnalysis } from "./prompt-analysis";
 
 /**
  * Fetch a list of prompts (without prompt_text) for browsing pages,
@@ -253,6 +254,14 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
     .map((row) => (Array.isArray(row.platforms) ? row.platforms[0] : row.platforms))
     .filter(Boolean);
 
+  // Always compute analysis from the FULL prompt text on the server, even
+  // when we won't return prompt_text to the client. The analysis surfaces
+  // structural meta (length, placeholders, parameters) without leaking
+  // the actual prompt — useful preview signal on the locked block.
+  const analysis: PromptAnalysis | null = prompt.prompt_text
+    ? analyzePrompt(prompt.prompt_text as string)
+    : null;
+
   return {
     prompt: {
       ...prompt,
@@ -266,5 +275,25 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
     myRating,
     isFavorited,
     isOwnPrompt: viewerUserId === prompt.creator_id,
+    analysis,
+  };
+}
+
+/**
+ * Lightweight creator profile stats — total active prompts + total sales
+ * across all of them. Shown on the prompt detail page next to the creator
+ * card as a trust signal.
+ */
+export async function fetchCreatorStats(creatorId: string) {
+  const supabase = createSupabaseServiceClient();
+  const { data, count } = await supabase
+    .from("prompts")
+    .select("purchase_count", { count: "exact" })
+    .eq("creator_id", creatorId)
+    .eq("status", "active");
+  const totalSales = (data ?? []).reduce((s, r) => s + (r.purchase_count ?? 0), 0);
+  return {
+    activePrompts: count ?? 0,
+    totalSales,
   };
 }

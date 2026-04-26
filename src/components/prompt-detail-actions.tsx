@@ -16,6 +16,8 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
 import { useT } from "@/lib/i18n/provider";
 import { PromptText } from "./prompt-text";
+import type { PromptAnalysis } from "@/lib/prompt-analysis";
+import { Hash, Type, Sparkles as SparklesIcon } from "lucide-react";
 
 type Props = {
   promptId: string;
@@ -25,6 +27,7 @@ type Props = {
   isOwnPrompt: boolean;
   myRating: number | null;
   promptText: string | null;
+  analysis: PromptAnalysis | null;
 };
 
 export function PromptDetailActions(props: Props) {
@@ -289,6 +292,34 @@ export function PromptDetailActions(props: Props) {
                   : `${t("detail.unlockFor")} ${formatSol(props.priceSol)} SOL${priceUsd ? ` · ${priceUsd}` : ""}`}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Preview meta — visible regardless of access; tells the buyer what
+            they're about to unlock without leaking the prompt text itself. */}
+        {props.analysis && (
+          <div className="flex flex-wrap gap-1.5 border-t border-border bg-tint-1 px-3 py-2 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-tint-1 px-2 py-0.5 tabular-nums">
+              <Type className="h-3 w-3" />
+              {props.analysis.words} words · {props.analysis.chars} chars
+            </span>
+            {props.analysis.placeholderCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-0.5 text-violet-300 tabular-nums">
+                <SparklesIcon className="h-3 w-3" />
+                {props.analysis.placeholderCount} customizable
+              </span>
+            )}
+            {props.analysis.parameters.map((p) => (
+              <span
+                key={p.flag}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-tint-2 px-2 py-0.5 font-mono text-[10.5px] text-foreground/85"
+                title="Detected model parameter"
+              >
+                <Hash className="h-3 w-3 opacity-60" />
+                {p.flag}
+                {p.value && <span className="opacity-70">&nbsp;{p.value}</span>}
+              </span>
+            ))}
           </div>
         )}
       </div>
