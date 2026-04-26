@@ -27,29 +27,19 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const favorited = isFavorited(prompt.id);
   const isRemoved = prompt.status === "removed";
   const renderUrl = renderImageUrl(prompt.cover_image, { width: 600, quality: 78 });
-
-  // Card display ratio (width/height):
-  //   - If we know the natural ratio, clamp it to a 5:8 floor so phone-
-  //     screenshot-tall images (9:16) don't dominate the column.
-  //   - If we DON'T know the ratio (older prompts uploaded before
-  //     migration_005), default to 4:5 portrait — common-enough that
-  //     most images barely crop, and uniform enough to prevent the
-  //     "one super tall card" chaos.
-  // Either way the image fills the container with object-cover so any
-  // mismatch is a clean center-crop rather than overflow.
-  const MIN_RATIO = 0.625; // 5:8
-  const FALLBACK_RATIO = 0.8; // 4:5 — used when no dims stored
-  const naturalRatio =
-    prompt.cover_width && prompt.cover_height ? prompt.cover_width / prompt.cover_height : null;
-  const displayRatio = naturalRatio ? Math.max(naturalRatio, MIN_RATIO) : FALLBACK_RATIO;
+  // Render at natural aspect ratio. When we know the dims, set
+  // aspect-ratio + width/height upfront to reserve the box (zero CLS).
+  // When we don't, fall back to h-auto and let the browser size the
+  // image after load. No cropping — Pinterest-style.
+  const aspectStyle =
+    prompt.cover_width && prompt.cover_height
+      ? { aspectRatio: `${prompt.cover_width} / ${prompt.cover_height}` }
+      : undefined;
 
   return (
     <div className="gradient-border ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
       <Link href={`/prompt/${prompt.id}`} className="block">
-        <div
-          className="relative w-full overflow-hidden bg-muted"
-          style={{ aspectRatio: `${displayRatio}` }}
-        >
+        <div className="relative w-full overflow-hidden bg-muted" style={aspectStyle}>
           {renderUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -57,10 +47,12 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               alt={prompt.title}
               loading="lazy"
               decoding="async"
-              className="absolute inset-0 block h-full w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
+              width={prompt.cover_width ?? undefined}
+              height={prompt.cover_height ?? undefined}
+              className="block h-auto w-full transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+            <div className="flex aspect-square w-full items-center justify-center text-xs text-muted-foreground">
               No image
             </div>
           )}
