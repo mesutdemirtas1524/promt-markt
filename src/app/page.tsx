@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { fetchPromptCards, fetchCategories } from "@/lib/queries";
+import { fetchPromptCards, fetchCategories, fetchPublicStats } from "@/lib/queries";
+import { PriceTag } from "@/components/price-tag";
 import { getServerT } from "@/lib/i18n/server";
 import { InfiniteFeed } from "@/components/infinite-feed";
 import { Button } from "@/components/ui/button";
@@ -25,10 +26,16 @@ export default async function HomePage({
 
   const { t } = await getServerT();
   const PAGE_SIZE = 24;
-  const [prompts, categories] = await Promise.all([
+  const [prompts, categories, stats] = await Promise.all([
     fetchPromptCards({ orderBy: sort, priceFilter: price, limit: PAGE_SIZE }),
     fetchCategories(),
+    fetchPublicStats(),
   ]);
+  const showStats =
+    stats.activePrompts > 0 ||
+    stats.activeCreators > 0 ||
+    stats.recentSales > 0 ||
+    stats.recentVolumeSol > 0;
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
@@ -58,6 +65,27 @@ export default async function HomePage({
               </Button>
             </Link>
           </div>
+
+          {showStats && (
+            <dl className="mt-6 grid w-full grid-cols-2 gap-x-8 gap-y-4 border-t border-border/60 pt-6 sm:grid-cols-4">
+              <Stat
+                label="Active prompts"
+                value={stats.activePrompts.toLocaleString()}
+              />
+              <Stat
+                label="Creators"
+                value={stats.activeCreators.toLocaleString()}
+              />
+              <Stat
+                label="Sales · 30d"
+                value={stats.recentSales.toLocaleString()}
+              />
+              <Stat
+                label="Volume · 30d"
+                value={<PriceTag sol={stats.recentVolumeSol} size="base" />}
+              />
+            </dl>
+          )}
         </div>
       </section>
 
@@ -169,6 +197,17 @@ export default async function HomePage({
           </Link>
         </div>
       </section>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="mt-1 text-xl font-semibold tabular-nums">{value}</dd>
     </div>
   );
 }

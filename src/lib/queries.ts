@@ -287,6 +287,51 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   };
 }
 
+export type PublicStats = {
+  activePrompts: number;
+  activeCreators: number;
+  recentSales: number;
+  recentVolumeSol: number;
+};
+
+/**
+ * Marketplace-wide totals + recent activity, used as a credibility
+ * strip on the home hero. `recent*` fields cover the last 30 days.
+ */
+export async function fetchPublicStats(): Promise<PublicStats> {
+  const supabase = createSupabaseServiceClient();
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [{ count: activePrompts }, creatorsRes, recentRes] = await Promise.all([
+    supabase
+      .from("prompts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active"),
+    supabase
+      .from("prompts")
+      .select("creator_id")
+      .eq("status", "active"),
+    supabase
+      .from("purchases")
+      .select("price_paid_sol")
+      .gte("created_at", cutoff),
+  ]);
+
+  const activeCreators = new Set(
+    ((creatorsRes.data ?? []) as Array<{ creator_id: string }>).map((r) => r.creator_id)
+  ).size;
+
+  const recentRows = (recentRes.data ?? []) as Array<{ price_paid_sol: number | string | null }>;
+  const recentVolumeSol = recentRows.reduce((s, r) => s + Number(r.price_paid_sol ?? 0), 0);
+
+  return {
+    activePrompts: activePrompts ?? 0,
+    activeCreators,
+    recentSales: recentRows.length,
+    recentVolumeSol,
+  };
+}
+
 export type TrendingCreator = {
   id: string;
   username: string;
