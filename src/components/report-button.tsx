@@ -107,22 +107,48 @@ export function ReportButton({ promptId }: { promptId: string }) {
             </div>
 
             <div className="space-y-2">
-              {REASONS.map((r) => (
-                <button
-                  key={r.value}
-                  type="button"
-                  onClick={() => setReason(r.value)}
-                  className={cn(
-                    "block w-full rounded-lg border px-3 py-2.5 text-left transition-all",
-                    reason === r.value
-                      ? "border-red-400/40 bg-red-500/[0.06]"
-                      : "border-border bg-tint-1 hover:bg-tint-2"
-                  )}
-                >
-                  <div className="text-sm font-medium tracking-tight">{r.label}</div>
-                  <div className="mt-0.5 text-[11.5px] text-muted-foreground">{r.help}</div>
-                </button>
-              ))}
+              {REASONS.map((r) => {
+                const active = reason === r.value;
+                return (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => setReason(r.value)}
+                    className={cn(
+                      "block w-full rounded-lg border px-3 py-2.5 text-left transition-all",
+                      active
+                        ? "border-red-400/80 bg-red-500/25 ring-2 ring-red-400/40"
+                        : "border-border bg-tint-1 hover:bg-tint-2"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div
+                        className={cn(
+                          "text-sm font-medium tracking-tight",
+                          active && "text-red-100"
+                        )}
+                      >
+                        {r.label}
+                      </div>
+                      {active && (
+                        <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500 text-white">
+                          <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M2.5 6.5L5 9l4.5-5.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      className={cn(
+                        "mt-0.5 text-[11.5px]",
+                        active ? "text-red-100/85" : "text-muted-foreground"
+                      )}
+                    >
+                      {r.help}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             <label className="mt-4 mb-1.5 block text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground">
