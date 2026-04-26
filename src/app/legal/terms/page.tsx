@@ -55,8 +55,11 @@ export default function TermsPage() {
           to the seller&apos;s additional terms (if any).</li>
         <li>You may not redistribute, resell, or sublicense purchased prompts on competing
           marketplaces without the seller&apos;s explicit permission.</li>
-        <li>Sales are settled on-chain and are generally final. See our{" "}
-          <a href="/legal/refund">Refund Policy</a> for the limited exceptions.</li>
+        <li>
+          <strong>All sales are final.</strong> Solana transactions are irreversible by
+          nature and {APP_NAME} does not offer refunds. Preview the cover images and
+          read the description carefully before buying.
+        </li>
       </ul>
 
       <h2>5. Prohibited content</h2>

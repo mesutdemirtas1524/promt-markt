@@ -9,7 +9,6 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <nav className="mb-8 flex flex-wrap gap-1 border-b border-border text-sm">
         <LegalTab href="/legal/terms">Terms</LegalTab>
         <LegalTab href="/legal/privacy">Privacy</LegalTab>
-        <LegalTab href="/legal/refund">Refunds</LegalTab>
       </nav>
       <article className="prose-legal">{children}</article>
     </div>

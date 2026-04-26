@@ -32,9 +32,6 @@ export async function Footer() {
           <Link href="/legal/privacy" className="transition-colors hover:text-foreground">
             Privacy
           </Link>
-          <Link href="/legal/refund" className="transition-colors hover:text-foreground">
-            Refunds
-          </Link>
           <a
             href="https://github.com/mesutdemirtas1524/promt-markt"
             className="transition-colors hover:text-foreground"
