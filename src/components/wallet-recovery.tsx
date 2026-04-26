@@ -1,6 +1,7 @@
 "use client";
 
-import { usePrivy, useSetWalletRecovery, useExportWallet } from "@privy-io/react-auth";
+import { usePrivy, useSetWalletRecovery } from "@privy-io/react-auth";
+import { useExportWallet as useExportSolanaWallet } from "@privy-io/react-auth/solana";
 import { Button } from "./ui/button";
 import { ShieldCheck, ShieldAlert, Key, ExternalLink } from "lucide-react";
 import { useMemo } from "react";
@@ -27,7 +28,9 @@ type Props = {
 export function WalletRecovery({ variant = "card" }: Props) {
   const { user, ready } = usePrivy();
   const { setWalletRecovery } = useSetWalletRecovery();
-  const { exportWallet } = useExportWallet();
+  // Default useExportWallet from @privy-io/react-auth is Ethereum-only;
+  // our embedded wallets are Solana, so use the Solana-specific export.
+  const { exportWallet } = useExportSolanaWallet();
 
   const embedded = useMemo(() => {
     if (!user?.linkedAccounts) return null;
@@ -104,7 +107,12 @@ export function WalletRecovery({ variant = "card" }: Props) {
           <ExternalLink className="h-3.5 w-3.5" />
           {isProtected ? "Change recovery method" : "Set up recovery"}
         </Button>
-        <Button type="button" variant="outline" onClick={() => exportWallet()} className="gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => exportWallet({ address: embedded.address })}
+          className="gap-1.5"
+        >
           <Key className="h-3.5 w-3.5" />
           Export private key
         </Button>
