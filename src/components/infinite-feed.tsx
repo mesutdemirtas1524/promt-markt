@@ -8,6 +8,7 @@ type FilterParams = {
   sort?: "newest" | "trending" | "top";
   price?: "all" | "free" | "paid";
   category?: string;
+  platform?: string;
   creator?: string;
   q?: string;
 };
@@ -58,6 +59,7 @@ export function InfiniteFeed({
       if (filters.sort) params.set("sort", filters.sort);
       if (filters.price) params.set("price", filters.price);
       if (filters.category) params.set("category", filters.category);
+      if (filters.platform) params.set("platform", filters.platform);
       if (filters.creator) params.set("creator", filters.creator);
       if (filters.q) params.set("q", filters.q);
       params.set("limit", String(PAGE_SIZE));

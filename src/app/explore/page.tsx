@@ -10,6 +10,7 @@ type SearchParams = {
   sort?: "newest" | "top" | "trending";
   price?: "free" | "paid" | "all";
   category?: string;
+  platform?: string;
   q?: string;
 };
 
@@ -30,6 +31,7 @@ export default async function ExplorePage({
       orderBy: sort,
       priceFilter: price,
       categorySlug: sp.category,
+      platformSlug: sp.platform,
       search: search || undefined,
       limit: PAGE_SIZE,
     }),
@@ -57,7 +59,7 @@ export default async function ExplorePage({
         <Chip href={buildHref(sp, { price: "paid" })} active={price === "paid"}>{t("filter.paid")}</Chip>
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-1.5">
+      <div className="mb-3 flex flex-wrap gap-1.5">
         <Chip href={buildHref(sp, { category: undefined })} active={!sp.category} size="sm">
           {t("filter.allCategories")}
         </Chip>
@@ -69,6 +71,22 @@ export default async function ExplorePage({
             size="sm"
           >
             {c.name}
+          </Chip>
+        ))}
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-1.5">
+        <Chip href={buildHref(sp, { platform: undefined })} active={!sp.platform} size="sm">
+          All platforms
+        </Chip>
+        {platforms.map((p) => (
+          <Chip
+            key={p.id}
+            href={buildHref(sp, { platform: p.slug })}
+            active={sp.platform === p.slug}
+            size="sm"
+          >
+            {p.name}
           </Chip>
         ))}
       </div>
@@ -97,6 +115,7 @@ export default async function ExplorePage({
             sort,
             price,
             category: sp.category,
+            platform: sp.platform,
             q: search || undefined,
           }}
         />

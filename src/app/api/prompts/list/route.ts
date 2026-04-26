@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const sort = (url.searchParams.get("sort") ?? "newest") as "newest" | "trending" | "top";
   const price = (url.searchParams.get("price") ?? "all") as "all" | "free" | "paid";
   const category = url.searchParams.get("category") ?? undefined;
+  const platform = url.searchParams.get("platform") ?? undefined;
   const creatorId = url.searchParams.get("creator") ?? undefined;
   const search = url.searchParams.get("q") ?? undefined;
   const limit = Math.min(48, Math.max(1, parseInt(url.searchParams.get("limit") ?? "24", 10)));
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest) {
     orderBy: sort,
     priceFilter: price,
     categorySlug: category,
+    platformSlug: platform,
     creatorId,
     search,
     limit,

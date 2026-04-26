@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import { ACCEPTED_IMAGE_TYPES } from "@/lib/constants";
 import type { User } from "@/lib/supabase/types";
 import { WalletRecovery } from "@/components/wallet-recovery";
 import { useRouter } from "next/navigation";
-import { Loader2, Upload, Trash2 } from "lucide-react";
+import { Loader2, Upload, Trash2, Check, X as XIcon } from "lucide-react";
 
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 
@@ -28,6 +28,42 @@ export function SettingsForm({ user }: { user: User }) {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  // Live availability state for the username field
+  type UsernameStatus = "idle" | "checking" | "ok" | "taken" | "format" | "self";
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("self");
+  useEffect(() => {
+    const u = username.trim().toLowerCase();
+    if (u === user.username) {
+      setUsernameStatus("self");
+      return;
+    }
+    if (!/^[a-z0-9_]{3,24}$/.test(u)) {
+      setUsernameStatus("format");
+      return;
+    }
+    setUsernameStatus("checking");
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const token = await getAccessToken();
+        const res = await fetch(`/api/user/check-username?u=${encodeURIComponent(u)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        const data = (await res.json()) as { available: boolean; reason?: string };
+        if (cancelled) return;
+        if (data.available) setUsernameStatus(data.reason === "self" ? "self" : "ok");
+        else setUsernameStatus(data.reason === "format" ? "format" : "taken");
+      } catch {
+        if (!cancelled) setUsernameStatus("idle");
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [username, user.username, getAccessToken]);
 
   async function handleAvatarPick(file: File) {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_IMAGE_TYPES)[number])) {
@@ -170,14 +206,46 @@ export function SettingsForm({ user }: { user: User }) {
 
           <div>
             <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
-              maxLength={24}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Lowercase letters, numbers, and underscore. 3–24 chars.
+            <div className="relative">
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) =>
+                  setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))
+                }
+                maxLength={24}
+                className="pr-9"
+              />
+              <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2">
+                {usernameStatus === "checking" && (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+                {(usernameStatus === "ok" || usernameStatus === "self") && (
+                  <Check className="h-4 w-4 text-emerald-400" />
+                )}
+                {(usernameStatus === "taken" || usernameStatus === "format") && (
+                  <XIcon className="h-4 w-4 text-red-400" />
+                )}
+              </div>
+            </div>
+            <p
+              className={
+                "mt-1 text-xs " +
+                (usernameStatus === "taken"
+                  ? "text-red-400"
+                  : usernameStatus === "format"
+                  ? "text-muted-foreground"
+                  : usernameStatus === "ok"
+                  ? "text-emerald-400"
+                  : "text-muted-foreground")
+              }
+            >
+              {usernameStatus === "taken" && "That username is already taken."}
+              {usernameStatus === "ok" && "Available."}
+              {usernameStatus === "self" && "Lowercase letters, numbers, and underscore. 3–24 chars."}
+              {usernameStatus === "format" && "Lowercase letters, numbers, and underscore. 3–24 chars."}
+              {usernameStatus === "checking" && "Checking…"}
+              {usernameStatus === "idle" && "Lowercase letters, numbers, and underscore. 3–24 chars."}
             </p>
           </div>
           <div>
@@ -220,7 +288,16 @@ export function SettingsForm({ user }: { user: User }) {
 
       <WalletRecovery variant="card" />
 
-      <Button type="submit" disabled={saving || uploadingAvatar}>
+      <Button
+        type="submit"
+        disabled={
+          saving ||
+          uploadingAvatar ||
+          usernameStatus === "checking" ||
+          usernameStatus === "taken" ||
+          usernameStatus === "format"
+        }
+      >
         {saving ? "Saving…" : "Save changes"}
       </Button>
     </form>

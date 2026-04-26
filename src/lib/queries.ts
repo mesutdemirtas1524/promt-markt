@@ -48,7 +48,15 @@ export async function fetchPromptCards(opts: {
   if (opts.orderBy === "top") {
     query = query.order("avg_rating", { ascending: false, nullsFirst: false });
   } else if (opts.orderBy === "trending") {
-    query = query.order("purchase_count", { ascending: false });
+    // "Trending" = popular among prompts uploaded in the last 30 days.
+    // Prevents the all-time most-purchased prompt from squatting at the
+    // top forever — new viral content can break through.
+    const cutoffMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    query = query
+      .gte("created_at", new Date(cutoffMs).toISOString())
+      .order("purchase_count", { ascending: false })
+      .order("favorite_count", { ascending: false })
+      .order("created_at", { ascending: false });
   } else {
     query = query.order("created_at", { ascending: false });
   }
@@ -57,6 +65,25 @@ export async function fetchPromptCards(opts: {
     const { data: cat } = await supabase.from("categories").select("id").eq("slug", opts.categorySlug).maybeSingle();
     if (cat) query = query.eq("category_id", cat.id);
     else return [];
+  }
+
+  if (opts.platformSlug) {
+    // Two-step filter: look up platform_id, then restrict prompts to those
+    // that have a row in prompt_platforms with that id. A direct join filter
+    // through PostgREST is awkward; this is fine at our scale.
+    const { data: pl } = await supabase
+      .from("platforms")
+      .select("id")
+      .eq("slug", opts.platformSlug)
+      .maybeSingle();
+    if (!pl) return [];
+    const { data: matches } = await supabase
+      .from("prompt_platforms")
+      .select("prompt_id")
+      .eq("platform_id", pl.id);
+    const ids = (matches ?? []).map((m) => m.prompt_id as string);
+    if (ids.length === 0) return [];
+    query = query.in("id", ids);
   }
 
   const { data, error } = await query;
