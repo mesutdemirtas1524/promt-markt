@@ -6,7 +6,6 @@ import { PriceTag } from "./price-tag";
 import { Star, Heart } from "lucide-react";
 import { FavoriteButton } from "./favorite-button";
 import { useFavorites } from "@/hooks/use-favorites";
-import { renderImageUrl } from "@/lib/image";
 
 export type PromptCardData = {
   id: string;
@@ -26,7 +25,11 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const { isFavorited } = useFavorites();
   const favorited = isFavorited(prompt.id);
   const isRemoved = prompt.status === "removed";
-  const renderUrl = renderImageUrl(prompt.cover_image, { width: 600, quality: 78 });
+  // Serve the raw original image URL — the Supabase render endpoint
+  // sometimes appears to crop/zoom in unexpected ways. Original is also
+  // required for free-tier Supabase plans where transformations aren't
+  // available. We pay a bit of bandwidth for visual fidelity.
+  const renderUrl = prompt.cover_image;
   // Render at natural aspect ratio. When we know the dims, set
   // aspect-ratio + width/height upfront to reserve the box (zero CLS).
   // When we don't, fall back to h-auto and let the browser size the
