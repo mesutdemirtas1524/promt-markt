@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PriceTag } from "@/components/price-tag";
+import { WalletRecovery } from "@/components/wallet-recovery";
 import { CREATOR_SHARE_BPS } from "@/lib/constants";
 
 export default async function DashboardOverview() {
@@ -23,11 +24,14 @@ export default async function DashboardOverview() {
   const earned = (totalSales * CREATOR_SHARE_BPS) / 10_000;
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Stat title="My listings" value={listings ?? 0} />
-      <Stat title="Prompts I own" value={purchased ?? 0} />
-      <Stat title="Sales" value={sales?.length ?? 0} />
-      <Stat title="Earned" value={<PriceTag sol={earned} size="base" />} />
+    <div className="space-y-6">
+      <WalletRecovery variant="banner" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat title="My listings" value={listings ?? 0} />
+        <Stat title="Prompts I own" value={purchased ?? 0} />
+        <Stat title="Sales" value={sales?.length ?? 0} />
+        <Stat title="Earned" value={<PriceTag sol={earned} size="base" />} />
+      </div>
     </div>
   );
 }

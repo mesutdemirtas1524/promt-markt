@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { shortAddress } from "@/lib/utils";
 import { ACCEPTED_IMAGE_TYPES } from "@/lib/constants";
 import type { User } from "@/lib/supabase/types";
+import { WalletRecovery } from "@/components/wallet-recovery";
 import { useRouter } from "next/navigation";
 import { Loader2, Upload, Trash2 } from "lucide-react";
 
@@ -206,7 +207,7 @@ export function SettingsForm({ user }: { user: User }) {
         <CardContent className="space-y-2 p-6">
           <Label>Solana wallet</Label>
           {user.wallet_address ? (
-            <div className="rounded-md bg-muted px-3 py-2 font-mono text-xs">
+            <div className="rounded-md bg-tint-1 px-3 py-2 font-mono text-xs">
               {shortAddress(user.wallet_address, 8)}
             </div>
           ) : (
@@ -216,6 +217,8 @@ export function SettingsForm({ user }: { user: User }) {
           )}
         </CardContent>
       </Card>
+
+      <WalletRecovery variant="card" />
 
       <Button type="submit" disabled={saving || uploadingAvatar}>
         {saving ? "Saving…" : "Save changes"}
