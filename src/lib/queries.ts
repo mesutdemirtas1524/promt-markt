@@ -243,58 +243,22 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let prompt: any = null;
   const full = await supabase.from("prompts").select(fullSelect).eq("id", promptId).maybeSingle();
-  console.log("fetchPromptDetail.full", {
-    promptId,
-    hasData: !!full.data,
-    error: full.error?.message ?? null,
-    errorCode: full.error?.code ?? null,
-    errorDetails: full.error?.details ?? null,
-  });
-  if (full.error || !full.data) {
-    if (full.error) {
-      console.warn(
-        "fetchPromptDetail: full select failed, retrying without join:",
-        full.error.message
-      );
-    } else {
-      console.warn(
-        "fetchPromptDetail: full select returned no data, retrying without join for id",
-        promptId
-      );
-    }
+  if (full.error) {
+    console.warn(
+      "fetchPromptDetail: full select failed, retrying without join:",
+      full.error.message
+    );
     const lite = await supabase
       .from("prompts")
       .select(fallbackSelect)
       .eq("id", promptId)
       .maybeSingle();
-    console.log("fetchPromptDetail.lite", {
-      promptId,
-      hasData: !!lite.data,
-      error: lite.error?.message ?? null,
-      errorCode: lite.error?.code ?? null,
-      errorDetails: lite.error?.details ?? null,
-    });
     prompt = lite.data ?? null;
   } else {
-    prompt = full.data;
+    prompt = full.data ?? null;
   }
 
-  if (!prompt) {
-    // Last-resort: a bare select to confirm whether the row exists at all
-    // when we strip every join. If THIS comes back empty, the issue is
-    // either auth (unlikely with service client) or a literal absence.
-    const bare = await supabase
-      .from("prompts")
-      .select("id, status, creator_id, title")
-      .eq("id", promptId)
-      .maybeSingle();
-    console.warn("fetchPromptDetail: no prompt row from joined queries", {
-      promptId,
-      bareData: bare.data,
-      bareError: bare.error?.message ?? null,
-    });
-    return null;
-  }
+  if (!prompt) return null;
 
   let hasPurchased = false;
   if (viewerUserId && viewerUserId !== prompt.creator_id) {
@@ -309,13 +273,7 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   const isOwner = Boolean(viewerUserId && viewerUserId === prompt.creator_id);
 
   // Removed prompts are only visible to the creator and to past buyers.
-  if (prompt.status !== "active" && !isOwner && !hasPurchased) {
-    console.warn(
-      "fetchPromptDetail: hiding non-active prompt from non-owner/non-buyer",
-      { promptId, status: prompt.status, isOwner, hasPurchased }
-    );
-    return null;
-  }
+  if (prompt.status !== "active" && !isOwner && !hasPurchased) return null;
 
   let hasAccess = false;
   if (isOwner || hasPurchased) {
