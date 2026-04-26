@@ -70,46 +70,34 @@ export default async function HomePage({
 
   return (
     <div className="w-full">
-      {/* Hero strip: title + big search + stats */}
+      {/* Compact hero: just the search bar + a thin stats strip. The
+          marketplace itself is the page; the hero stays out of its way. */}
       <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-grid opacity-50" />
+        <div className="absolute inset-0 bg-grid opacity-40" />
         <div
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 60% 50% at 20% 0%, var(--ambient-a), transparent 60%), radial-gradient(ellipse 50% 60% at 95% 100%, var(--ambient-b), transparent 60%)",
+              "radial-gradient(ellipse 70% 80% at 30% 50%, var(--ambient-a), transparent 70%), radial-gradient(ellipse 50% 80% at 95% 50%, var(--ambient-b), transparent 70%)",
           }}
         />
-        <div className="relative w-full px-4 py-10 sm:px-6 lg:px-10 xl:px-16 lg:py-14">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-tint-1 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
-              <Sparkles className="h-3 w-3 text-violet-400" />
-              <span className="tracking-tight">{t("home.badge")}</span>
-            </div>
-            <h1 className="text-3xl font-semibold leading-[1.1] tracking-tight md:text-5xl">
-              {t("home.title.1")}{" "}
-              <span className="text-gradient-violet">{t("home.title.2")}</span>
-            </h1>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-              {t("home.subtitle")}
-            </p>
-            <div className="mx-auto mt-6 max-w-2xl">
-              <DiscoverSearch
-                initialValue={search}
-                preserve={sp as Record<string, string | undefined>}
-                placeholder="Search prompts, styles, creators…"
-              />
-            </div>
+        <div className="relative w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-10 xl:px-16">
+          <div className="mx-auto max-w-2xl">
+            <DiscoverSearch
+              initialValue={search}
+              preserve={sp as Record<string, string | undefined>}
+              placeholder="Search prompts, styles, creators…"
+            />
           </div>
 
           {showStats && (
-            <dl className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
-              <Stat label="Active prompts" value={stats.activePrompts.toLocaleString()} />
-              <Stat label="Creators" value={stats.activeCreators.toLocaleString()} />
-              <Stat label="Sales · 30d" value={stats.recentSales.toLocaleString()} />
-              <Stat
-                label="Volume · 30d"
-                value={<PriceTag sol={stats.recentVolumeSol} size="base" />}
+            <dl className="mx-auto mt-4 flex max-w-4xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs">
+              <InlineStat label="prompts" value={stats.activePrompts.toLocaleString()} />
+              <InlineStat label="creators" value={stats.activeCreators.toLocaleString()} />
+              <InlineStat label="sales · 30d" value={stats.recentSales.toLocaleString()} />
+              <InlineStat
+                label="volume · 30d"
+                value={<PriceTag sol={stats.recentVolumeSol} size="xs" />}
               />
             </dl>
           )}
@@ -260,13 +248,11 @@ export default async function HomePage({
   );
 }
 
-function Stat({ label, value }: { label: string; value: React.ReactNode }) {
+function InlineStat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="text-center sm:text-left">
-      <dt className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="mt-1 text-xl font-semibold tabular-nums">{value}</dd>
+    <div className="inline-flex items-baseline gap-1.5">
+      <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dd className="text-sm font-semibold tabular-nums">{value}</dd>
     </div>
   );
 }

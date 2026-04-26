@@ -33,10 +33,15 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const isFree = prompt.price_usd <= 0;
 
   const renderUrl = prompt.cover_image;
-  const aspectStyle =
+  // Clamp the displayed aspect ratio so very wide images don't render as a
+  // stripe and very tall images don't dominate the column. Wider than 3:2 or
+  // taller than 5:7 gets cropped via object-cover. No-dim fallback is square.
+  const naturalRatio =
     prompt.cover_width && prompt.cover_height
-      ? { aspectRatio: `${prompt.cover_width} / ${prompt.cover_height}` }
-      : undefined;
+      ? prompt.cover_width / prompt.cover_height
+      : 1;
+  const displayRatio = Math.max(0.71, Math.min(1.5, naturalRatio));
+  const aspectStyle = { aspectRatio: String(displayRatio) };
 
   return (
     <div className="ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
@@ -49,12 +54,10 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               alt={prompt.title}
               loading="lazy"
               decoding="async"
-              width={prompt.cover_width ?? undefined}
-              height={prompt.cover_height ?? undefined}
-              className="block h-auto w-full transition-transform duration-[600ms] ease-out group-hover:scale-[1.04]"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.04]"
             />
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center text-xs text-muted-foreground">
+            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
               No image
             </div>
           )}
@@ -146,10 +149,13 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   );
 }
 
-/** Wrap a list of PromptCards in a CSS-columns masonry layout. */
+/** Wrap a list of PromptCards in a CSS-columns masonry layout.
+ *  One fewer column at most breakpoints than before so individual cards stay
+ *  legible — landscape images especially used to render as a stripe in 5–6
+ *  column layouts. */
 export function PromptMasonry({ children }: { children: React.ReactNode }) {
   return (
-    <div className="columns-2 gap-3 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 [&>*]:mb-3">
+    <div className="columns-2 gap-3 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-3">
       {children}
     </div>
   );
