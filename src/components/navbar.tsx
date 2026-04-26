@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "./ui/button";
-import { Search, Plus, LayoutDashboard, LogOut, Heart } from "lucide-react";
+import { Search, Plus, LogOut, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useSolBalance } from "@/hooks/use-sol-balance";
@@ -95,12 +95,6 @@ export function Navbar() {
                 </Button>
               </Link>
 
-              <Link href="/dashboard" className="hidden md:inline-flex">
-                <Button variant="ghost" size="icon" aria-label={t("nav.dashboard")} className="h-9 w-9">
-                  <LayoutDashboard className="h-4 w-4" />
-                </Button>
-              </Link>
-
               {dbUser?.wallet_address && balance !== null && (
                 <div className="hidden rounded-lg border border-border bg-tint-1 px-2.5 py-1 text-right text-[11px] leading-tight md:block">
                   <div className="inline-flex items-center gap-1 font-semibold tabular-nums text-foreground">
@@ -115,9 +109,9 @@ export function Navbar() {
 
               {dbUser && (
                 <Link
-                  href={`/u/${dbUser.username}`}
+                  href="/dashboard"
                   className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-tint-2"
-                  aria-label={t("nav.profile")}
+                  aria-label={t("nav.dashboard")}
                 >
                   <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-tint-2 ring-1 ring-border">
                     {dbUser.avatar_url && (
