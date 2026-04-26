@@ -43,15 +43,37 @@ export default async function EarningsPage() {
     30
   );
 
-  // Top prompts by sales count + earnings
+  // Pull view counts for every active prompt by this creator so we can
+  // compute conversion rate alongside revenue.
+  const { data: myPrompts } = await supabase
+    .from("prompts")
+    .select("id, title, view_count, purchase_count")
+    .eq("creator_id", user.id)
+    .eq("status", "active");
+  const totalViews = (myPrompts ?? []).reduce(
+    (s, p) => s + Number((p as { view_count?: number }).view_count ?? 0),
+    0
+  );
+
   const promptStats = new Map<
     string,
-    { id: string; title: string; sales: number; volumeSol: number }
+    { id: string; title: string; sales: number; volumeSol: number; views: number }
   >();
+  for (const p of myPrompts ?? []) {
+    const row = p as { id: string; title: string; view_count?: number };
+    promptStats.set(row.id, {
+      id: row.id,
+      title: row.title,
+      sales: 0,
+      volumeSol: 0,
+      views: Number(row.view_count ?? 0),
+    });
+  }
   for (const r of rows) {
     const p = Array.isArray(r.prompts) ? r.prompts[0] : r.prompts;
     if (!p) continue;
-    const existing = promptStats.get(p.id) ?? { id: p.id, title: p.title, sales: 0, volumeSol: 0 };
+    const existing =
+      promptStats.get(p.id) ?? { id: p.id, title: p.title, sales: 0, volumeSol: 0, views: 0 };
     existing.sales += 1;
     existing.volumeSol += Number(r.price_paid_sol ?? 0);
     promptStats.set(p.id, existing);
@@ -78,11 +100,19 @@ export default async function EarningsPage() {
       </div>
 
       {/* Top stat strip */}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Stat label="Total sales" value={String(rows.length)} />
-        <Stat label="Volume" value={<PriceTag sol={total} size="base" />} />
         <Stat label="Earned (80%)" value={<PriceTag sol={earned} size="base" />} />
         <Stat label="Tips received" value={<PriceTag sol={tipsTotal} size="base" />} />
+        <Stat label="Views" value={totalViews.toLocaleString()} />
+        <Stat
+          label="Conversion"
+          value={
+            totalViews === 0
+              ? "—"
+              : `${((rows.length / totalViews) * 100).toFixed(rows.length / totalViews < 0.01 ? 2 : 1)}%`
+          }
+        />
       </div>
 
       {/* Sales over time */}
@@ -117,7 +147,11 @@ export default async function EarningsPage() {
                       </Link>
                     </div>
                     <div className="flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
+                      <span className="tabular-nums">{p.views} views</span>
                       <span className="tabular-nums">{p.sales} sales</span>
+                      <span className="tabular-nums">
+                        {p.views > 0 ? `${((p.sales / p.views) * 100).toFixed(1)}%` : "—"}
+                      </span>
                       <span className="tabular-nums text-foreground">
                         <PriceTag sol={(p.volumeSol * CREATOR_SHARE_BPS) / 10_000} size="xs" />
                       </span>

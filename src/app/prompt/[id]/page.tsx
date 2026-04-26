@@ -16,6 +16,7 @@ import { PromptDetailActions } from "@/components/prompt-detail-actions";
 import { FavoriteButton } from "@/components/favorite-button";
 import { OwnerActions } from "@/components/owner-actions";
 import { PromptGallery } from "@/components/image-lightbox";
+import { ViewTracker } from "@/components/view-tracker";
 import { formatRating, formatRelativeTime, formatSol } from "@/lib/utils";
 import { Pencil, Star, Heart, ShoppingBag } from "lucide-react";
 
@@ -96,6 +97,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      {!isRemoved && <ViewTracker promptId={prompt.id} />}
       {isRemoved && (
         <div className="mb-6 rounded-xl border border-red-500/25 bg-red-500/[0.06] p-4 text-sm">
           <strong className="text-red-400">{t("detail.removed.title")}</strong>{" "}
