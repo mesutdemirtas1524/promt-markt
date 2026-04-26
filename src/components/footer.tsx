@@ -17,6 +17,12 @@ export async function Footer() {
           <Link href="/explore" className="transition-colors hover:text-foreground">
             {t("nav.explore")}
           </Link>
+          <Link href="/new" className="transition-colors hover:text-foreground">
+            New arrivals
+          </Link>
+          <Link href="/creators" className="transition-colors hover:text-foreground">
+            Top creators
+          </Link>
           <Link href="/upload" className="transition-colors hover:text-foreground">
             {t("footer.sell")}
           </Link>

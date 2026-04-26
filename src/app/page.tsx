@@ -3,7 +3,7 @@ import { fetchPromptCards, fetchCategories } from "@/lib/queries";
 import { getServerT } from "@/lib/i18n/server";
 import { InfiniteFeed } from "@/components/infinite-feed";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Trophy } from "lucide-react";
 
 // ISR — re-render every 60s. New uploads also trigger on-demand
 // revalidation via revalidatePath('/') in /api/prompts/create.
@@ -101,6 +101,41 @@ export default async function HomePage({
           filters={{ sort, price }}
         />
       )}
+
+      <section className="mt-16 grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/new"
+          className="group flex items-center justify-between gap-4 rounded-2xl border border-border bg-tint-1 p-5 transition-all hover:bg-tint-2"
+        >
+          <div>
+            <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium tracking-wider text-violet-300">
+              <Sparkles className="h-2.5 w-2.5" />
+              JUST DROPPED
+            </div>
+            <h3 className="text-base font-semibold tracking-tight">New arrivals</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The freshest prompts on the marketplace.
+            </p>
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+        </Link>
+        <Link
+          href="/creators"
+          className="group flex items-center justify-between gap-4 rounded-2xl border border-border bg-tint-1 p-5 transition-all hover:bg-tint-2"
+        >
+          <div>
+            <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium tracking-wider text-amber-300">
+              <Trophy className="h-2.5 w-2.5" />
+              LAST 30 DAYS
+            </div>
+            <h3 className="text-base font-semibold tracking-tight">Top creators</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Whoever&apos;s shipping the prompts buyers actually want.
+            </p>
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+        </Link>
+      </section>
 
       {categories.length > 0 && (
         <section className="mt-16">

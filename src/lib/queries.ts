@@ -287,6 +287,90 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   };
 }
 
+export type TrendingCreator = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  follower_count: number;
+  recent_sales: number;
+  recent_volume_sol: number;
+  active_prompts: number;
+};
+
+/**
+ * Top creators ranked by sales in the last `days` window. We pull
+ * recent purchases, group by creator, then hydrate the user rows in
+ * a second query. Two round-trips beats a complex Postgres view at
+ * our scale and stays easy to tweak.
+ */
+export async function fetchTrendingCreators(days = 30, limit = 24): Promise<TrendingCreator[]> {
+  const supabase = createSupabaseServiceClient();
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: purchases } = await supabase
+    .from("purchases")
+    .select("price_paid_sol, prompt:prompts!inner(creator_id)")
+    .gte("created_at", cutoff);
+
+  const tally = new Map<string, { sales: number; volume: number }>();
+  for (const r of (purchases ?? []) as Array<{
+    price_paid_sol: number | string | null;
+    prompt: { creator_id: string } | { creator_id: string }[] | null;
+  }>) {
+    const p = Array.isArray(r.prompt) ? r.prompt[0] : r.prompt;
+    if (!p) continue;
+    const cur = tally.get(p.creator_id) ?? { sales: 0, volume: 0 };
+    cur.sales += 1;
+    cur.volume += Number(r.price_paid_sol ?? 0);
+    tally.set(p.creator_id, cur);
+  }
+
+  const ranked = Array.from(tally.entries())
+    .sort((a, b) => b[1].volume - a[1].volume || b[1].sales - a[1].sales)
+    .slice(0, limit);
+
+  if (ranked.length === 0) return [];
+
+  const creatorIds = ranked.map(([id]) => id);
+  const [{ data: users }, { data: counts }] = await Promise.all([
+    supabase
+      .from("users")
+      .select("id, username, display_name, avatar_url, bio, follower_count")
+      .in("id", creatorIds),
+    supabase
+      .from("prompts")
+      .select("creator_id")
+      .in("creator_id", creatorIds)
+      .eq("status", "active"),
+  ]);
+
+  const userMap = new Map((users ?? []).map((u) => [u.id, u]));
+  const promptCounts = new Map<string, number>();
+  for (const c of counts ?? []) {
+    promptCounts.set(c.creator_id, (promptCounts.get(c.creator_id) ?? 0) + 1);
+  }
+
+  return ranked
+    .map(([id, stats]) => {
+      const u = userMap.get(id);
+      if (!u) return null;
+      return {
+        id,
+        username: u.username,
+        display_name: u.display_name,
+        avatar_url: u.avatar_url,
+        bio: u.bio,
+        follower_count: u.follower_count ?? 0,
+        recent_sales: stats.sales,
+        recent_volume_sol: stats.volume,
+        active_prompts: promptCounts.get(id) ?? 0,
+      };
+    })
+    .filter((x): x is TrendingCreator => x !== null);
+}
+
 /**
  * Lightweight creator profile stats — total active prompts + total sales
  * across all of them. Shown on the prompt detail page next to the creator
