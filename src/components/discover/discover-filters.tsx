@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Category, Platform } from "@/lib/supabase/types";
 import { DiscoverPriceRange } from "./discover-price-range";
+import { DiscoverSection } from "./discover-section";
 import { Check } from "lucide-react";
 
 export type DiscoverSearchParams = {
@@ -42,23 +43,23 @@ export function DiscoverFilters({
   const price = sp.price ?? "all";
 
   return (
-    <div className="space-y-7">
-      <Section title="Sort">
+    <div className="space-y-5">
+      <DiscoverSection title="Sort" defaultOpen collapsible={false}>
         <RadioRow href={buildHref(sp, { sort: "newest" })} active={sort === "newest"}>Newest</RadioRow>
         <RadioRow href={buildHref(sp, { sort: "trending" })} active={sort === "trending"}>Trending</RadioRow>
         <RadioRow href={buildHref(sp, { sort: "top" })} active={sort === "top"}>Top rated</RadioRow>
-      </Section>
+      </DiscoverSection>
 
-      <Section title="Price">
+      <DiscoverSection title="Price" defaultOpen collapsible={false}>
         <RadioRow href={buildHref(sp, { price: "all" })} active={price === "all"}>All</RadioRow>
         <RadioRow href={buildHref(sp, { price: "free" })} active={price === "free"}>Free only</RadioRow>
         <RadioRow href={buildHref(sp, { price: "paid" })} active={price === "paid"}>Paid only</RadioRow>
         <div className="pt-2">
           <DiscoverPriceRange initialMin={sp.min} initialMax={sp.max} preserve={sp} />
         </div>
-      </Section>
+      </DiscoverSection>
 
-      <Section title="Category">
+      <DiscoverSection title="Category" defaultOpen={Boolean(sp.category)} badge={sp.category ? 1 : 0}>
         <RadioRow href={buildHref(sp, { category: undefined })} active={!sp.category}>
           All categories
         </RadioRow>
@@ -71,9 +72,9 @@ export function DiscoverFilters({
             {c.name}
           </RadioRow>
         ))}
-      </Section>
+      </DiscoverSection>
 
-      <Section title="Platform">
+      <DiscoverSection title="Platform" defaultOpen={Boolean(sp.platform)} badge={sp.platform ? 1 : 0}>
         <RadioRow href={buildHref(sp, { platform: undefined })} active={!sp.platform}>
           All platforms
         </RadioRow>
@@ -86,18 +87,7 @@ export function DiscoverFilters({
             {p.name}
           </RadioRow>
         ))}
-      </Section>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {title}
-      </h3>
-      <div className="space-y-px">{children}</div>
+      </DiscoverSection>
     </div>
   );
 }

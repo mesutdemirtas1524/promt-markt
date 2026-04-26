@@ -20,7 +20,8 @@ const updateSchema = z.object({
   description: z.string().min(PROMPT_LIMITS.description.min).max(PROMPT_LIMITS.description.max),
   prompt_text: z.string().min(PROMPT_LIMITS.promptText.min).max(PROMPT_LIMITS.promptText.max),
   price_usd: z.number().min(0).max(PROMPT_LIMITS.price.max),
-  category_id: z.number().int().nullable(),
+  category_id: z.number().int().nullable().optional(),
+  category_ids: z.array(z.number().int()).max(10).optional(),
   platform_ids: z.array(z.number().int()).max(10),
   // Three-state cover: undefined = leave alone, null = clear (fall back to
   // first gallery image), object = replace.
@@ -73,13 +74,23 @@ export async function POST(req: NextRequest) {
     priceSol = Math.round(usdToSol(input.price_usd, solUsd) * 1_000_000) / 1_000_000;
   }
 
+  const categoryIds = Array.from(
+    new Set(
+      [
+        ...(input.category_ids ?? []),
+        ...(typeof input.category_id === "number" ? [input.category_id] : []),
+      ].filter((n) => Number.isFinite(n))
+    )
+  );
+  const primaryCategoryId = categoryIds[0] ?? null;
+
   const updates: Record<string, unknown> = {
     title: input.title.trim(),
     description: input.description.trim(),
     prompt_text: input.prompt_text.trim(),
     price_usd: input.price_usd,
     price_sol: priceSol,
-    category_id: input.category_id,
+    category_id: primaryCategoryId,
   };
   if (input.cover !== undefined) {
     updates.cover_image_url = input.cover?.url ?? null;
@@ -98,6 +109,16 @@ export async function POST(req: NextRequest) {
   if (input.platform_ids.length > 0) {
     const rows = input.platform_ids.map((pid) => ({ prompt_id: input.prompt_id, platform_id: pid }));
     await supabase.from("prompt_platforms").insert(rows);
+  }
+
+  // Re-sync the categories join table when the client posted any
+  // category fields. (If neither is present we leave it alone.)
+  if (input.category_ids !== undefined || input.category_id !== undefined) {
+    await supabase.from("prompt_categories").delete().eq("prompt_id", input.prompt_id);
+    if (categoryIds.length > 0) {
+      const rows = categoryIds.map((cid) => ({ prompt_id: input.prompt_id, category_id: cid }));
+      await supabase.from("prompt_categories").insert(rows);
+    }
   }
 
   // Edits change title, description, price — invalidate the feeds so the

@@ -72,9 +72,21 @@ export async function fetchPromptCards(opts: {
   }
 
   if (opts.categorySlug) {
+    // Filter through the prompt_categories join so a prompt tagged with
+    // multiple categories matches each one. Falls back to the legacy
+    // category_id column for any rows the migration hasn't touched yet.
     const { data: cat } = await supabase.from("categories").select("id").eq("slug", opts.categorySlug).maybeSingle();
-    if (cat) query = query.eq("category_id", cat.id);
-    else return [];
+    if (!cat) return [];
+    const { data: matches } = await supabase
+      .from("prompt_categories")
+      .select("prompt_id")
+      .eq("category_id", cat.id);
+    const ids = (matches ?? []).map((m) => m.prompt_id as string);
+    if (ids.length === 0) {
+      query = query.eq("category_id", cat.id);
+    } else {
+      query = query.in("id", ids);
+    }
   }
 
   if (opts.platformSlug) {
@@ -209,6 +221,7 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
       creator:users!creator_id ( id, username, display_name, avatar_url, wallet_address ),
       images:prompt_images ( id, image_url, position, width, height ),
       category:categories ( id, name, slug ),
+      categories:prompt_categories ( categories ( id, name, slug ) ),
       platforms:prompt_platforms ( platforms ( id, name, slug ) )
     `
     )
@@ -268,6 +281,17 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   const platforms = ((prompt.platforms ?? []) as Array<{ platforms: unknown }>)
     .map((row) => (Array.isArray(row.platforms) ? row.platforms[0] : row.platforms))
     .filter(Boolean);
+  const categoriesList = ((prompt.categories ?? []) as Array<{ categories: unknown }>)
+    .map((row) => (Array.isArray(row.categories) ? row.categories[0] : row.categories))
+    .filter(Boolean);
+  // If the join table is empty (legacy row), fall back to the single
+  // category column so the badges still render something.
+  const allCategories =
+    categoriesList.length > 0
+      ? categoriesList
+      : category
+        ? [category]
+        : [];
 
   // Always compute analysis from the FULL prompt text on the server, even
   // when we won't return prompt_text to the client. The analysis surfaces
@@ -284,6 +308,7 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
       images,
       creator,
       category,
+      categories: allCategories,
       platforms,
     },
     hasAccess,

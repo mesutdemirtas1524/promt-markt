@@ -151,10 +151,11 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
 }
 
 /** Wrap a list of PromptCards in a CSS-columns masonry layout.
- *  Fewer, wider columns than the original so cards have room to read. */
+ *  Fixed at 4 columns from lg upward — cards stretch to fill the
+ *  available width rather than packing more in. */
 export function PromptMasonry({ children }: { children: React.ReactNode }) {
   return (
-    <div className="columns-1 gap-4 sm:columns-2 md:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 [&>*]:mb-4">
+    <div className="columns-2 gap-4 sm:columns-2 md:columns-3 lg:columns-4 [&>*]:mb-4">
       {children}
     </div>
   );

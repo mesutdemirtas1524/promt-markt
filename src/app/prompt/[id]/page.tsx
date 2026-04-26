@@ -133,7 +133,11 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
         <div className="space-y-5 lg:col-span-2 lg:sticky lg:top-20 lg:self-start">
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-1.5">
-              {prompt.category && <Badge variant="secondary">{prompt.category.name}</Badge>}
+              {(prompt.categories as Array<{ id: number; name: string }> | undefined)?.map((c) => (
+                <Badge key={c.id} variant="secondary">
+                  {c.name}
+                </Badge>
+              ))}
               {prompt.platforms.map((p: { id: number; name: string }) => (
                 <Badge key={p.id} variant="outline">
                   {p.name}

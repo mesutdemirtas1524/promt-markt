@@ -22,7 +22,7 @@ type Initial = {
   description: string;
   prompt_text: string;
   price_usd: number;
-  category_id: number | null;
+  category_ids: number[];
   platform_ids: number[];
   cover_image_url: string | null;
 };
@@ -71,7 +71,7 @@ export function EditPromptForm({
   const [description, setDescription] = useState(initial.description);
   const [promptText, setPromptText] = useState(initial.prompt_text);
   const [priceUsd, setPriceUsd] = useState(String(initial.price_usd));
-  const [categoryId, setCategoryId] = useState<number | null>(initial.category_id);
+  const [categoryIds, setCategoryIds] = useState<number[]>(initial.category_ids);
   const [platformIds, setPlatformIds] = useState<number[]>(initial.platform_ids);
   const [submitting, setSubmitting] = useState(false);
 
@@ -87,6 +87,10 @@ export function EditPromptForm({
 
   function togglePlatform(id: number) {
     setPlatformIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function toggleCategory(id: number) {
+    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   async function pickCover(file: File) {
@@ -189,7 +193,7 @@ export function EditPromptForm({
           description,
           prompt_text: promptText,
           price_usd: price,
-          category_id: categoryId,
+          category_ids: categoryIds,
           platform_ids: platformIds,
           ...(coverPayload === undefined ? {} : { cover: coverPayload }),
         }),
@@ -325,16 +329,18 @@ export function EditPromptForm({
       </div>
 
       <div>
-        <Label className="mb-2 block">Category</Label>
+        <Label className="mb-2 block">
+          Categories <span className="text-muted-foreground">(pick one or more)</span>
+        </Label>
         <div className="flex flex-wrap gap-2">
           {categories.map((c) => (
             <button
               key={c.id}
               type="button"
-              onClick={() => setCategoryId(categoryId === c.id ? null : c.id)}
+              onClick={() => toggleCategory(c.id)}
               className={
                 "rounded-full border px-3 py-1 text-xs transition-colors " +
-                (categoryId === c.id
+                (categoryIds.includes(c.id)
                   ? "border-foreground bg-foreground text-background"
                   : "border-border bg-card hover:bg-accent")
               }

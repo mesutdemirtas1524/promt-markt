@@ -19,7 +19,11 @@ const createSchema = z.object({
   description: z.string().min(PROMPT_LIMITS.description.min).max(PROMPT_LIMITS.description.max),
   prompt_text: z.string().min(PROMPT_LIMITS.promptText.min).max(PROMPT_LIMITS.promptText.max),
   price_usd: z.number().min(0).max(PROMPT_LIMITS.price.max),
-  category_id: z.number().int().nullable(),
+  // Backwards-compatible: accept the old single category_id, the new
+  // category_ids array, or both. We persist all of them via the join
+  // table; category_id is also written for legacy reads.
+  category_id: z.number().int().nullable().optional(),
+  category_ids: z.array(z.number().int()).max(10).optional(),
   platform_ids: z.array(z.number().int()).max(10),
   cover: imageSchema.nullable().optional(),
   // Backwards-compatible: accept the old string-array shape OR the new
@@ -73,6 +77,18 @@ export async function POST(req: NextRequest) {
     input.images ?? (input.image_urls ?? []).map((url) => ({ url }));
   const cover = input.cover ?? imageInputsEarly[0] ?? null;
 
+  // Resolve a normalized list of category IDs. category_ids wins, but if
+  // only the legacy single category_id was sent we fold it in.
+  const categoryIds = Array.from(
+    new Set(
+      [
+        ...(input.category_ids ?? []),
+        ...(typeof input.category_id === "number" ? [input.category_id] : []),
+      ].filter((n) => Number.isFinite(n))
+    )
+  );
+  const primaryCategoryId = categoryIds[0] ?? null;
+
   const { data: prompt, error: pErr } = await supabase
     .from("prompts")
     .insert({
@@ -82,7 +98,7 @@ export async function POST(req: NextRequest) {
       prompt_text: input.prompt_text.trim(),
       price_usd: input.price_usd,
       price_sol: priceSol,
-      category_id: input.category_id,
+      category_id: primaryCategoryId,
       cover_image_url: cover?.url ?? null,
       cover_width: cover?.width ?? null,
       cover_height: cover?.height ?? null,
@@ -113,6 +129,14 @@ export async function POST(req: NextRequest) {
       platform_id: pid,
     }));
     await supabase.from("prompt_platforms").insert(platformRows);
+  }
+
+  if (categoryIds.length > 0) {
+    const categoryRows = categoryIds.map((cid) => ({
+      prompt_id: prompt.id,
+      category_id: cid,
+    }));
+    await supabase.from("prompt_categories").insert(categoryRows);
   }
 
   // Invalidate the cached feeds so the new prompt appears immediately

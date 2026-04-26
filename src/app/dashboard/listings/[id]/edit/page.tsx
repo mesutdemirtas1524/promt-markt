@@ -18,7 +18,8 @@ export default async function EditPromptPage({ params }: { params: Promise<{ id:
     .select(
       `
       id, creator_id, title, description, prompt_text, price_usd, category_id, status, cover_image_url,
-      platforms:prompt_platforms ( platform_id )
+      platforms:prompt_platforms ( platform_id ),
+      categories:prompt_categories ( category_id )
     `
     )
     .eq("id", id)
@@ -29,6 +30,14 @@ export default async function EditPromptPage({ params }: { params: Promise<{ id:
 
   const [categories, platforms] = await Promise.all([fetchCategories(), fetchPlatforms()]);
   const platformIds = ((prompt.platforms ?? []) as { platform_id: number }[]).map((p) => p.platform_id);
+  const joinCategoryIds = ((prompt.categories ?? []) as { category_id: number }[]).map((c) => c.category_id);
+  // Fall back to the legacy single category_id when the join table is empty
+  // for this row (a prompt created before migration 015).
+  const categoryIds = joinCategoryIds.length > 0
+    ? joinCategoryIds
+    : prompt.category_id != null
+      ? [prompt.category_id]
+      : [];
 
   return (
     <div className="w-full">
@@ -40,7 +49,7 @@ export default async function EditPromptPage({ params }: { params: Promise<{ id:
           description: prompt.description,
           prompt_text: prompt.prompt_text,
           price_usd: Number(prompt.price_usd),
-          category_id: prompt.category_id,
+          category_ids: categoryIds,
           platform_ids: platformIds,
           cover_image_url: prompt.cover_image_url ?? null,
         }}

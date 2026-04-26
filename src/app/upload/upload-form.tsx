@@ -69,7 +69,7 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
   const [description, setDescription] = useState("");
   const [promptText, setPromptText] = useState("");
   const [priceUsd, setPriceUsd] = useState("0");
-  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [platformIds, setPlatformIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const coverInput = useRef<HTMLInputElement>(null);
@@ -141,6 +141,10 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
 
   function togglePlatform(id: number) {
     setPlatformIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function toggleCategory(id: number) {
+    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -234,7 +238,7 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
           description,
           prompt_text: promptText,
           price_usd: price,
-          category_id: categoryId,
+          category_ids: categoryIds,
           platform_ids: platformIds,
           images: galleryUploads.map((u, i) => ({
             url: u.publicUrl,
@@ -422,18 +426,20 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
         </p>
       </div>
 
-      {/* Category */}
+      {/* Categories — multi-select */}
       <div>
-        <Label className="mb-2 block">Category</Label>
+        <Label className="mb-2 block">
+          Categories <span className="text-muted-foreground">(pick one or more)</span>
+        </Label>
         <div className="flex flex-wrap gap-2">
           {categories.map((c) => (
             <button
               key={c.id}
               type="button"
-              onClick={() => setCategoryId(categoryId === c.id ? null : c.id)}
+              onClick={() => toggleCategory(c.id)}
               className={
                 "rounded-full border px-3 py-1 text-xs transition-colors " +
-                (categoryId === c.id
+                (categoryIds.includes(c.id)
                   ? "border-foreground bg-foreground text-background"
                   : "border-border bg-card hover:bg-accent")
               }
