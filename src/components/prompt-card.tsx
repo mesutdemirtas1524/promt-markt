@@ -26,23 +26,30 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const { isFavorited } = useFavorites();
   const favorited = isFavorited(prompt.id);
   const isRemoved = prompt.status === "removed";
-  // Render at ~600px wide; the masonry caps cards around that on most screens.
   const renderUrl = renderImageUrl(prompt.cover_image, { width: 600, quality: 78 });
-  // Reserve the box up-front so layout doesn't jump when the image arrives.
-  // Clamp extreme tall ratios (e.g. 9:16 phone screenshots) to 5:8 so a
-  // single card can't stretch a column past the fold and hide the title.
-  // Truly tall images get a slight top/bottom center-crop (object-cover).
+
+  // Card display ratio (width/height):
+  //   - If we know the natural ratio, clamp it to a 5:8 floor so phone-
+  //     screenshot-tall images (9:16) don't dominate the column.
+  //   - If we DON'T know the ratio (older prompts uploaded before
+  //     migration_005), default to 4:5 portrait — common-enough that
+  //     most images barely crop, and uniform enough to prevent the
+  //     "one super tall card" chaos.
+  // Either way the image fills the container with object-cover so any
+  // mismatch is a clean center-crop rather than overflow.
+  const MIN_RATIO = 0.625; // 5:8
+  const FALLBACK_RATIO = 0.8; // 4:5 — used when no dims stored
   const naturalRatio =
     prompt.cover_width && prompt.cover_height ? prompt.cover_width / prompt.cover_height : null;
-  const MIN_RATIO = 0.625; // 5:8 portrait
-  const displayRatio = naturalRatio ? Math.max(naturalRatio, MIN_RATIO) : null;
-  const isClamped = naturalRatio !== null && naturalRatio < MIN_RATIO;
-  const aspectStyle = displayRatio ? { aspectRatio: `${displayRatio}` } : undefined;
+  const displayRatio = naturalRatio ? Math.max(naturalRatio, MIN_RATIO) : FALLBACK_RATIO;
 
   return (
     <div className="gradient-border ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
       <Link href={`/prompt/${prompt.id}`} className="block">
-        <div className="relative w-full overflow-hidden bg-muted" style={aspectStyle}>
+        <div
+          className="relative w-full overflow-hidden bg-muted"
+          style={{ aspectRatio: `${displayRatio}` }}
+        >
           {renderUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -50,16 +57,10 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               alt={prompt.title}
               loading="lazy"
               decoding="async"
-              width={prompt.cover_width ?? undefined}
-              height={prompt.cover_height ?? undefined}
-              className={
-                isClamped
-                  ? "absolute inset-0 block h-full w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
-                  : "block h-auto w-full transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
-              }
+              className="absolute inset-0 block h-full w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
             />
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center text-xs text-muted-foreground">
+            <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
               No image
             </div>
           )}
