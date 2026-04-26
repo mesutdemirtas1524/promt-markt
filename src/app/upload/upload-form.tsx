@@ -64,6 +64,7 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [images, setImages] = useState<LocalImage[]>([]);
+  const [cover, setCover] = useState<LocalImage | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [promptText, setPromptText] = useState("");
@@ -71,6 +72,36 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [platformIds, setPlatformIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const coverInput = useRef<HTMLInputElement>(null);
+
+  async function handleCoverPick(file: File) {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_IMAGE_TYPES)[number])) {
+      toast.error("Use PNG, JPG, or WEBP");
+      return;
+    }
+    if (file.size > PROMPT_LIMITS.imageSizeMB * 1024 * 1024) {
+      toast.error(`Cover exceeds ${PROMPT_LIMITS.imageSizeMB}MB`);
+      return;
+    }
+    let dims: { width: number; height: number } | undefined;
+    try {
+      dims = await readImageDimensions(file);
+    } catch {
+      // ok, upload anyway
+    }
+    if (cover) URL.revokeObjectURL(cover.preview);
+    setCover({
+      file,
+      preview: URL.createObjectURL(file),
+      width: dims?.width,
+      height: dims?.height,
+    });
+  }
+
+  function clearCover() {
+    if (cover) URL.revokeObjectURL(cover.preview);
+    setCover(null);
+  }
 
   async function handleFiles(picked: File[]) {
     if (picked.length === 0) return;
@@ -161,12 +192,18 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
       const token = await getAccessToken();
       if (!token) throw new Error("Auth token missing");
 
-      // 1. Request signed upload URLs
+      // 1. Request signed upload URLs — gallery first, then optional cover
+      // appended at the tail so the indexes stay obvious.
+      const allFiles = cover ? [...images, cover] : images;
       const signRes = await fetch("/api/upload/sign", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          files: images.map((img) => ({ name: img.file.name, type: img.file.type, size: img.file.size })),
+          files: allFiles.map((img) => ({
+            name: img.file.name,
+            type: img.file.type,
+            size: img.file.size,
+          })),
         }),
       });
       if (!signRes.ok) throw new Error((await signRes.json()).error ?? "Could not sign upload");
@@ -175,15 +212,18 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
       };
 
       // 2. Upload files directly to Supabase Storage
-      for (let i = 0; i < images.length; i++) {
+      for (let i = 0; i < allFiles.length; i++) {
         const u = uploads[i];
         const putRes = await fetch(u.signedUrl, {
           method: "PUT",
-          headers: { "Content-Type": images[i].file.type },
-          body: images[i].file,
+          headers: { "Content-Type": allFiles[i].file.type },
+          body: allFiles[i].file,
         });
         if (!putRes.ok) throw new Error(`Upload failed for image ${i + 1}`);
       }
+
+      const galleryUploads = uploads.slice(0, images.length);
+      const coverUpload = cover ? uploads[images.length] : null;
 
       // 3. Create prompt row
       const createRes = await fetch("/api/prompts/create", {
@@ -196,11 +236,14 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
           price_usd: price,
           category_id: categoryId,
           platform_ids: platformIds,
-          images: uploads.map((u, i) => ({
+          images: galleryUploads.map((u, i) => ({
             url: u.publicUrl,
             width: images[i].width,
             height: images[i].height,
           })),
+          cover: coverUpload && cover
+            ? { url: coverUpload.publicUrl, width: cover.width, height: cover.height }
+            : null,
         }),
       });
       if (!createRes.ok) throw new Error((await createRes.json()).error ?? "Create failed");
@@ -228,9 +271,65 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Images */}
+      {/* Cover image */}
       <div>
-        <Label className="mb-2 block">Images ({images.length}/{PROMPT_LIMITS.images.max})</Label>
+        <Label className="mb-2 block">
+          Cover image <span className="text-muted-foreground">(optional)</span>
+        </Label>
+        <div className="flex items-start gap-3">
+          <div className="relative h-32 w-32 overflow-hidden rounded-md border border-border bg-muted">
+            {cover ? (
+              <>
+                <Image
+                  src={cover.preview}
+                  alt=""
+                  fill
+                  sizes="128px"
+                  className="object-cover"
+                  unoptimized
+                />
+                <button
+                  type="button"
+                  onClick={clearCover}
+                  className="absolute right-1 top-1 rounded-full bg-background/90 p-1 transition-transform hover:scale-110"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => coverInput.current?.click()}
+                className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Upload className="h-5 w-5" />
+                Choose
+              </button>
+            )}
+          </div>
+          <p className="flex-1 text-xs leading-relaxed text-muted-foreground">
+            This is the image shown on cards across the marketplace. Square or 4:5
+            portrait works best. If empty, the first gallery image will be used.
+          </p>
+        </div>
+        <input
+          ref={coverInput}
+          type="file"
+          accept={ACCEPTED_IMAGE_TYPES.join(",")}
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) void handleCoverPick(f);
+          }}
+        />
+      </div>
+
+      {/* Gallery images */}
+      <div>
+        <Label className="mb-2 block">
+          Gallery images ({images.length}/{PROMPT_LIMITS.images.max})
+        </Label>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
           {images.map((img, i) => (
             <div key={i} className="relative aspect-square overflow-hidden rounded-md border border-border">
@@ -242,7 +341,7 @@ export function UploadForm({ categories, platforms }: { categories: Category[]; 
               >
                 <X className="h-3 w-3" />
               </button>
-              {i === 0 && (
+              {i === 0 && !cover && (
                 <div className="absolute bottom-1 left-1 rounded bg-background/90 px-1.5 py-0.5 text-[10px]">
                   Cover
                 </div>

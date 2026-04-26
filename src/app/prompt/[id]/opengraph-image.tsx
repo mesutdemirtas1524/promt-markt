@@ -12,7 +12,7 @@ export default async function Image({ params }: { params: { id: string } }) {
   const { data: prompt } = await supabase
     .from("prompts")
     .select(
-      `id, title, price_usd,
+      `id, title, price_usd, cover_image_url,
        creator:users!creator_id ( username, display_name, avatar_url ),
        images:prompt_images ( image_url, position )`
     )
@@ -27,7 +27,7 @@ export default async function Image({ params }: { params: { id: string } }) {
   const imgs = ((prompt.images ?? []) as { image_url: string; position: number }[]).sort(
     (a, b) => a.position - b.position
   );
-  const cover = imgs[0]?.image_url ?? null;
+  const cover = prompt.cover_image_url ?? imgs[0]?.image_url ?? null;
   const price = Number(prompt.price_usd);
   const priceLabel = price === 0 ? "FREE" : formatUsd(price).toUpperCase();
   const creatorName = creator?.display_name ?? `@${creator?.username ?? "creator"}`;

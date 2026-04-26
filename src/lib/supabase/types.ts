@@ -55,6 +55,11 @@ export type Prompt = {
   /** Cached SOL value at the time of upload. Display fallback only —
    *  checkout always recomputes from the live SOL/USD price. */
   price_sol: number;
+  /** Optional dedicated cover image — falls back to the first gallery
+   *  image when null. Shown on cards and OG share images. */
+  cover_image_url: string | null;
+  cover_width: number | null;
+  cover_height: number | null;
   category_id: number | null;
   status: "active" | "removed";
   avg_rating: number | null;

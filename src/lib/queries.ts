@@ -28,7 +28,7 @@ export async function fetchPromptCards(opts: {
     .from("prompts")
     .select(
       `
-      id, title, price_usd, price_sol, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count, status,
+      id, title, price_usd, price_sol, cover_image_url, cover_width, cover_height, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count, status,
       creator:users!creator_id ( username, avatar_url ),
       images:prompt_images ( image_url, position, width, height )
     `
@@ -107,7 +107,7 @@ export async function fetchPromptCards(opts: {
       height: number | null;
     }[];
     imgs.sort((a, b) => a.position - b.position);
-    const cover = imgs[0];
+    const firstImage = imgs[0];
     const creator = Array.isArray(p.creator) ? p.creator[0] : p.creator;
     return {
       id: p.id,
@@ -118,9 +118,9 @@ export async function fetchPromptCards(opts: {
       rating_count: p.rating_count,
       favorite_count: p.favorite_count ?? 0,
       purchase_count: p.purchase_count ?? 0,
-      cover_image: cover?.image_url ?? null,
-      cover_width: cover?.width ?? null,
-      cover_height: cover?.height ?? null,
+      cover_image: p.cover_image_url ?? firstImage?.image_url ?? null,
+      cover_width: p.cover_width ?? firstImage?.width ?? null,
+      cover_height: p.cover_height ?? firstImage?.height ?? null,
       creator_username: creator?.username ?? "unknown",
       creator_avatar_url: (creator as { avatar_url?: string | null } | null)?.avatar_url ?? null,
       status: (p.status as "active" | "removed") ?? "active",
@@ -137,7 +137,7 @@ export async function fetchFavoritedPrompts(userId: string, limit = 48): Promise
       `
       created_at,
       prompt:prompts!inner (
-        id, title, price_usd, price_sol, avg_rating, rating_count, favorite_count, purchase_count, status,
+        id, title, price_usd, price_sol, cover_image_url, cover_width, cover_height, avg_rating, rating_count, favorite_count, purchase_count, status,
         creator:users!creator_id ( username, avatar_url ),
         images:prompt_images ( image_url, position, width, height )
       )
@@ -169,9 +169,9 @@ export async function fetchFavoritedPrompts(userId: string, limit = 48): Promise
         rating_count: p.rating_count,
         favorite_count: p.favorite_count ?? 0,
         purchase_count: p.purchase_count ?? 0,
-        cover_image: cover?.image_url ?? null,
-        cover_width: cover?.width ?? null,
-        cover_height: cover?.height ?? null,
+        cover_image: (p as { cover_image_url?: string | null }).cover_image_url ?? cover?.image_url ?? null,
+        cover_width: (p as { cover_width?: number | null }).cover_width ?? cover?.width ?? null,
+        cover_height: (p as { cover_height?: number | null }).cover_height ?? cover?.height ?? null,
         creator_username: creator?.username ?? "unknown",
         creator_avatar_url: (creator as { avatar_url?: string | null } | null)?.avatar_url ?? null,
         status: (p.status as "active" | "removed") ?? "active",
@@ -479,7 +479,7 @@ export async function fetchSimilarPrompts(opts: {
     .from("prompts")
     .select(
       `
-      id, title, price_usd, price_sol, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count, status,
+      id, title, price_usd, price_sol, cover_image_url, cover_width, cover_height, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count, status,
       creator:users!creator_id ( username, avatar_url ),
       images:prompt_images ( image_url, position, width, height ),
       platforms:prompt_platforms ( platform_id )
@@ -510,8 +510,13 @@ export async function fetchSimilarPrompts(opts: {
       height: number | null;
     }[];
     imgs.sort((a, b) => a.position - b.position);
-    const cover = imgs[0];
+    const firstImage = imgs[0];
     const creator = Array.isArray(p.creator) ? p.creator[0] : p.creator;
+    const pp = p as {
+      cover_image_url?: string | null;
+      cover_width?: number | null;
+      cover_height?: number | null;
+    };
     return {
       id: p.id,
       title: p.title,
@@ -521,9 +526,9 @@ export async function fetchSimilarPrompts(opts: {
       rating_count: p.rating_count,
       favorite_count: p.favorite_count ?? 0,
       purchase_count: p.purchase_count ?? 0,
-      cover_image: cover?.image_url ?? null,
-      cover_width: cover?.width ?? null,
-      cover_height: cover?.height ?? null,
+      cover_image: pp.cover_image_url ?? firstImage?.image_url ?? null,
+      cover_width: pp.cover_width ?? firstImage?.width ?? null,
+      cover_height: pp.cover_height ?? firstImage?.height ?? null,
       creator_username: creator?.username ?? "unknown",
       creator_avatar_url: (creator as { avatar_url?: string | null } | null)?.avatar_url ?? null,
       status: (p.status as "active" | "removed") ?? "active",

@@ -39,7 +39,7 @@ export async function generateMetadata({
   const { data: prompt } = await supabase
     .from("prompts")
     .select(
-      `id, title, description, price_usd, status,
+      `id, title, description, price_usd, status, cover_image_url,
        creator:users!creator_id ( username, display_name ),
        images:prompt_images ( image_url, position )`
     )
@@ -53,7 +53,7 @@ export async function generateMetadata({
   const imgs = ((prompt.images ?? []) as { image_url: string; position: number }[]).sort(
     (a, b) => a.position - b.position
   );
-  const cover = imgs[0]?.image_url;
+  const cover = prompt.cover_image_url ?? imgs[0]?.image_url;
   const price = Number(prompt.price_usd);
   const priceLabel = price === 0 ? "Free" : formatUsd(price);
   const title = `${prompt.title} · ${priceLabel}`;

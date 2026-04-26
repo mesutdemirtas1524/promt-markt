@@ -50,7 +50,7 @@ export default async function FollowingFeedPage() {
     .from("prompts")
     .select(
       `
-      id, title, price_usd, price_sol, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count, status,
+      id, title, price_usd, price_sol, cover_image_url, cover_width, cover_height, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count, status,
       creator:users!creator_id ( username, avatar_url ),
       images:prompt_images ( image_url, position, width, height )
     `
@@ -78,9 +78,9 @@ export default async function FollowingFeedPage() {
       rating_count: p.rating_count,
       favorite_count: p.favorite_count ?? 0,
       purchase_count: p.purchase_count ?? 0,
-      cover_image: cover?.image_url ?? null,
-      cover_width: cover?.width ?? null,
-      cover_height: cover?.height ?? null,
+      cover_image: (p as { cover_image_url?: string | null }).cover_image_url ?? cover?.image_url ?? null,
+      cover_width: (p as { cover_width?: number | null }).cover_width ?? cover?.width ?? null,
+      cover_height: (p as { cover_height?: number | null }).cover_height ?? cover?.height ?? null,
       creator_username: creator?.username ?? "unknown",
       creator_avatar_url: (creator as { avatar_url?: string | null } | null)?.avatar_url ?? null,
     };

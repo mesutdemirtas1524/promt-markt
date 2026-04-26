@@ -21,6 +21,7 @@ const createSchema = z.object({
   price_usd: z.number().min(0).max(PROMPT_LIMITS.price.max),
   category_id: z.number().int().nullable(),
   platform_ids: z.array(z.number().int()).max(10),
+  cover: imageSchema.nullable().optional(),
   // Backwards-compatible: accept the old string-array shape OR the new
   // object-with-dims shape so the API doesn't break in flight.
   image_urls: z.array(z.string().url()).min(PROMPT_LIMITS.images.min).max(PROMPT_LIMITS.images.max).optional(),
@@ -67,6 +68,11 @@ export async function POST(req: NextRequest) {
     priceSol = Math.round(usdToSol(input.price_usd, solUsd) * 1_000_000) / 1_000_000;
   }
 
+  // Resolve cover: explicit upload > first gallery image fallback.
+  const imageInputsEarly: { url: string; width?: number; height?: number }[] =
+    input.images ?? (input.image_urls ?? []).map((url) => ({ url }));
+  const cover = input.cover ?? imageInputsEarly[0] ?? null;
+
   const { data: prompt, error: pErr } = await supabase
     .from("prompts")
     .insert({
@@ -77,6 +83,9 @@ export async function POST(req: NextRequest) {
       price_usd: input.price_usd,
       price_sol: priceSol,
       category_id: input.category_id,
+      cover_image_url: cover?.url ?? null,
+      cover_width: cover?.width ?? null,
+      cover_height: cover?.height ?? null,
     })
     .select()
     .single();
@@ -85,9 +94,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: pErr?.message ?? "Failed to create" }, { status: 500 });
   }
 
-  const imageInputs: { url: string; width?: number; height?: number }[] =
-    input.images ?? (input.image_urls ?? []).map((url) => ({ url }));
-  const imageRows = imageInputs.map((img, i) => ({
+  const imageRows = imageInputsEarly.map((img, i) => ({
     prompt_id: prompt.id,
     image_url: img.url,
     width: img.width ?? null,

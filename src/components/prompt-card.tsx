@@ -33,14 +33,15 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const isFree = prompt.price_usd <= 0;
 
   const renderUrl = prompt.cover_image;
-  // Clamp the displayed aspect ratio so very wide images don't render as a
-  // stripe and very tall images don't dominate the column. Wider than 3:2 or
-  // taller than 5:7 gets cropped via object-cover. No-dim fallback is square.
+  // Clamp the displayed aspect ratio loosely — almost no cropping for the
+  // common formats (9:16 portraits, square, 4:3, 3:2, 16:9). Only the very
+  // extreme outliers (panoramic, columnar) get pulled back into range.
+  // No-dim fallback is square.
   const naturalRatio =
     prompt.cover_width && prompt.cover_height
       ? prompt.cover_width / prompt.cover_height
       : 1;
-  const displayRatio = Math.max(0.71, Math.min(1.5, naturalRatio));
+  const displayRatio = Math.max(0.55, Math.min(1.78, naturalRatio));
   const aspectStyle = { aspectRatio: String(displayRatio) };
 
   return (
@@ -150,12 +151,10 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
 }
 
 /** Wrap a list of PromptCards in a CSS-columns masonry layout.
- *  One fewer column at most breakpoints than before so individual cards stay
- *  legible — landscape images especially used to render as a stripe in 5–6
- *  column layouts. */
+ *  Fewer, wider columns than the original so cards have room to read. */
 export function PromptMasonry({ children }: { children: React.ReactNode }) {
   return (
-    <div className="columns-2 gap-3 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 [&>*]:mb-3">
+    <div className="columns-1 gap-4 sm:columns-2 md:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 [&>*]:mb-4">
       {children}
     </div>
   );

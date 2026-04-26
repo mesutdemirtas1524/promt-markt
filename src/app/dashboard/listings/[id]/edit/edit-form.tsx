@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -9,10 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { HighlightablePromptInput } from "@/components/highlightable-prompt-input";
-import { PROMPT_LIMITS } from "@/lib/constants";
+import { PROMPT_LIMITS, ACCEPTED_IMAGE_TYPES } from "@/lib/constants";
 import { useSolPrice } from "@/hooks/use-sol-price";
 import { formatSol } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import { SolLogo } from "@/components/sol-logo";
 import type { Category, Platform } from "@/lib/supabase/types";
 
@@ -23,7 +24,33 @@ type Initial = {
   price_usd: number;
   category_id: number | null;
   platform_ids: number[];
+  cover_image_url: string | null;
 };
+
+function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = document.createElement("img");
+    let settled = false;
+    const cleanup = () => URL.revokeObjectURL(url);
+    const done = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      fn();
+    };
+    const timer = setTimeout(() => done(() => reject(new Error("dim timeout"))), 4000);
+    img.onload = () => {
+      clearTimeout(timer);
+      done(() => resolve({ width: img.naturalWidth, height: img.naturalHeight }));
+    };
+    img.onerror = (e) => {
+      clearTimeout(timer);
+      done(() => reject(e));
+    };
+    img.src = url;
+  });
+}
 
 export function EditPromptForm({
   promptId,
@@ -48,8 +75,52 @@ export function EditPromptForm({
   const [platformIds, setPlatformIds] = useState<number[]>(initial.platform_ids);
   const [submitting, setSubmitting] = useState(false);
 
+  // Cover state: existing URL stays unless replaced or removed.
+  const [coverUrl, setCoverUrl] = useState<string | null>(initial.cover_image_url);
+  const [pendingCover, setPendingCover] = useState<{
+    file: File;
+    preview: string;
+    width?: number;
+    height?: number;
+  } | null>(null);
+  const coverInput = useRef<HTMLInputElement>(null);
+
   function togglePlatform(id: number) {
     setPlatformIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  async function pickCover(file: File) {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_IMAGE_TYPES)[number])) {
+      toast.error("Use PNG, JPG, or WEBP");
+      return;
+    }
+    if (file.size > PROMPT_LIMITS.imageSizeMB * 1024 * 1024) {
+      toast.error(`Cover exceeds ${PROMPT_LIMITS.imageSizeMB}MB`);
+      return;
+    }
+    let dims: { width: number; height: number } | undefined;
+    try {
+      dims = await readImageDimensions(file);
+    } catch {
+      // ok
+    }
+    if (pendingCover) URL.revokeObjectURL(pendingCover.preview);
+    setPendingCover({
+      file,
+      preview: URL.createObjectURL(file),
+      width: dims?.width,
+      height: dims?.height,
+    });
+  }
+
+  function cancelPendingCover() {
+    if (pendingCover) URL.revokeObjectURL(pendingCover.preview);
+    setPendingCover(null);
+  }
+
+  function removeCover() {
+    cancelPendingCover();
+    setCoverUrl(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -68,6 +139,47 @@ export function EditPromptForm({
     setSubmitting(true);
     try {
       const token = await getAccessToken();
+      if (!token) throw new Error("Auth token missing");
+
+      // If the creator picked a new cover, upload it first.
+      let coverPayload: { url: string; width?: number; height?: number } | null | undefined =
+        undefined;
+      if (pendingCover) {
+        const signRes = await fetch("/api/upload/sign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            files: [
+              {
+                name: pendingCover.file.name,
+                type: pendingCover.file.type,
+                size: pendingCover.file.size,
+              },
+            ],
+          }),
+        });
+        if (!signRes.ok) throw new Error((await signRes.json()).error ?? "Could not sign upload");
+        const { uploads } = (await signRes.json()) as {
+          uploads: { signedUrl: string; publicUrl: string }[];
+        };
+        const u = uploads[0];
+        const putRes = await fetch(u.signedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": pendingCover.file.type },
+          body: pendingCover.file,
+        });
+        if (!putRes.ok) throw new Error("Cover upload failed");
+        coverPayload = {
+          url: u.publicUrl,
+          width: pendingCover.width,
+          height: pendingCover.height,
+        };
+      } else if (initial.cover_image_url && coverUrl === null) {
+        // Creator hit "Remove" without uploading a replacement → null clears.
+        coverPayload = null;
+      }
+      // Otherwise leave cover untouched (undefined).
+
       const res = await fetch("/api/prompts/update", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -79,6 +191,7 @@ export function EditPromptForm({
           price_usd: price,
           category_id: categoryId,
           platform_ids: platformIds,
+          ...(coverPayload === undefined ? {} : { cover: coverPayload }),
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Update failed");
@@ -95,8 +208,84 @@ export function EditPromptForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <p className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-        Images can&apos;t be changed after upload. To change images, delete this prompt and create a new one.
+        Gallery images can&apos;t be changed after upload. To change them, delete this prompt
+        and create a new one. The cover image (shown on cards) can still be replaced below.
       </p>
+
+      <div>
+        <Label className="mb-2 block">Cover image</Label>
+        <div className="flex items-start gap-3">
+          <div className="relative h-32 w-32 overflow-hidden rounded-md border border-border bg-muted">
+            {pendingCover ? (
+              <>
+                <Image
+                  src={pendingCover.preview}
+                  alt=""
+                  fill
+                  sizes="128px"
+                  className="object-cover"
+                  unoptimized
+                />
+                <button
+                  type="button"
+                  onClick={cancelPendingCover}
+                  className="absolute right-1 top-1 rounded-full bg-background/90 p-1 transition-transform hover:scale-110"
+                  aria-label="Cancel new cover"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+                <span className="absolute bottom-1 left-1 rounded bg-violet-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                  New
+                </span>
+              </>
+            ) : coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={coverUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <button
+                type="button"
+                onClick={() => coverInput.current?.click()}
+                className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Upload className="h-5 w-5" />
+                Choose
+              </button>
+            )}
+          </div>
+          <div className="flex flex-1 flex-col gap-2">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Shown on cards across the marketplace. Leave empty to fall back to the first
+              gallery image.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => coverInput.current?.click()}
+              >
+                {coverUrl || pendingCover ? "Replace" : "Upload cover"}
+              </Button>
+              {(coverUrl || pendingCover) && (
+                <Button type="button" size="sm" variant="ghost" onClick={removeCover}>
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+        <input
+          ref={coverInput}
+          type="file"
+          accept={ACCEPTED_IMAGE_TYPES.join(",")}
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) void pickCover(f);
+          }}
+        />
+      </div>
 
       <div>
         <Label htmlFor="title">Title</Label>

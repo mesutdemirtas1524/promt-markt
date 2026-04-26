@@ -8,6 +8,12 @@ import { fetchSolUsdPriceServer, usdToSol } from "@/lib/sol-price-server";
 
 export const runtime = "nodejs";
 
+const coverSchema = z.object({
+  url: z.string().url(),
+  width: z.number().int().positive().max(20_000).optional(),
+  height: z.number().int().positive().max(20_000).optional(),
+});
+
 const updateSchema = z.object({
   prompt_id: z.string().uuid(),
   title: z.string().min(PROMPT_LIMITS.title.min).max(PROMPT_LIMITS.title.max),
@@ -16,6 +22,9 @@ const updateSchema = z.object({
   price_usd: z.number().min(0).max(PROMPT_LIMITS.price.max),
   category_id: z.number().int().nullable(),
   platform_ids: z.array(z.number().int()).max(10),
+  // Three-state cover: undefined = leave alone, null = clear (fall back to
+  // first gallery image), object = replace.
+  cover: coverSchema.nullable().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -64,16 +73,23 @@ export async function POST(req: NextRequest) {
     priceSol = Math.round(usdToSol(input.price_usd, solUsd) * 1_000_000) / 1_000_000;
   }
 
+  const updates: Record<string, unknown> = {
+    title: input.title.trim(),
+    description: input.description.trim(),
+    prompt_text: input.prompt_text.trim(),
+    price_usd: input.price_usd,
+    price_sol: priceSol,
+    category_id: input.category_id,
+  };
+  if (input.cover !== undefined) {
+    updates.cover_image_url = input.cover?.url ?? null;
+    updates.cover_width = input.cover?.width ?? null;
+    updates.cover_height = input.cover?.height ?? null;
+  }
+
   const { error: updErr } = await supabase
     .from("prompts")
-    .update({
-      title: input.title.trim(),
-      description: input.description.trim(),
-      prompt_text: input.prompt_text.trim(),
-      price_usd: input.price_usd,
-      price_sol: priceSol,
-      category_id: input.category_id,
-    })
+    .update(updates)
     .eq("id", input.prompt_id);
 
   if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
