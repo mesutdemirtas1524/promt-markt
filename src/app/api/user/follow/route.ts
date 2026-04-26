@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { verifyPrivyToken } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { emailFollow } from "@/lib/email/notify";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,25 @@ export async function POST(req: NextRequest) {
         { onConflict: "follower_id,following_id" }
       );
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    void (async () => {
+      try {
+        const { data: meRow } = await supabase
+          .from("users")
+          .select("display_name, username")
+          .eq("id", me.id)
+          .single();
+        if (meRow) {
+          await emailFollow(supabase, {
+            followedId: target.id,
+            followerName: meRow.display_name ?? `@${meRow.username}`,
+            followerUsername: meRow.username,
+          });
+        }
+      } catch (err) {
+        console.error("emailFollow failed", err);
+      }
+    })();
   } else {
     const { error } = await supabase
       .from("follows")

@@ -37,6 +37,11 @@ export function SettingsForm({ user }: { user: User }) {
     tiktok: user.social_links?.tiktok ?? "",
     github: user.social_links?.github ?? "",
   });
+  const [emailPrefs, setEmailPrefs] = useState({
+    sales: user.email_prefs?.sales !== false,
+    tips: user.email_prefs?.tips !== false,
+    follows: user.email_prefs?.follows !== false,
+  });
   const [saving, setSaving] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
@@ -171,6 +176,7 @@ export function SettingsForm({ user }: { user: User }) {
           avatar_url: avatarUrl ? avatarUrl.split("?")[0] : null,
           banner_url: bannerUrl ? bannerUrl.split("?")[0] : null,
           social_links: social,
+          email_prefs: emailPrefs,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Save failed");
@@ -424,6 +430,46 @@ export function SettingsForm({ user }: { user: User }) {
                   maxLength={field.key === "website" ? 200 : 120}
                 />
               </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 p-6">
+          <div>
+            <h3 className="text-sm font-semibold tracking-tight">Email notifications</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {user.email
+                ? `We'll email ${user.email} when something on your account happens.`
+                : "Add an email login in your wallet menu to receive these."}
+            </p>
+          </div>
+          <div className="space-y-2">
+            {(
+              [
+                { key: "sales", label: "New sales", hint: "When someone buys one of your prompts" },
+                { key: "tips", label: "Tips", hint: "When someone sends you a tip" },
+                { key: "follows", label: "New followers", hint: "When someone follows you" },
+              ] as const
+            ).map((p) => (
+              <label
+                key={p.key}
+                className="flex items-start gap-3 rounded-md border border-border bg-tint-1 px-3 py-2.5 hover:bg-tint-2"
+              >
+                <input
+                  type="checkbox"
+                  checked={emailPrefs[p.key]}
+                  onChange={(e) =>
+                    setEmailPrefs((prev) => ({ ...prev, [p.key]: e.target.checked }))
+                  }
+                  className="mt-0.5 h-4 w-4 accent-violet-500"
+                />
+                <div>
+                  <div className="text-sm">{p.label}</div>
+                  <div className="text-[11px] text-muted-foreground">{p.hint}</div>
+                </div>
+              </label>
             ))}
           </div>
         </CardContent>

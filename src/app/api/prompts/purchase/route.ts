@@ -7,6 +7,8 @@ import {
   findReferenceSignature,
   verifyPurchaseTransaction,
 } from "@/lib/solana";
+import { emailSale } from "@/lib/email/notify";
+import { CREATOR_SHARE_BPS } from "@/lib/constants";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -139,6 +141,34 @@ export async function POST(req: NextRequest) {
   // Sales count and trending order changed — refresh public feeds.
   revalidatePath("/");
   revalidatePath("/explore");
+
+  // Best-effort sale email to the creator. Don't block the response.
+  void (async () => {
+    try {
+      const { data: prompt } = await supabase
+        .from("prompts")
+        .select("title, creator_id")
+        .eq("id", intent.prompt_id)
+        .single();
+      const { data: buyerRow } = await supabase
+        .from("users")
+        .select("display_name, username")
+        .eq("id", buyer.id)
+        .single();
+      if (prompt && buyerRow && prompt.creator_id !== buyer.id) {
+        await emailSale(supabase, {
+          creatorId: prompt.creator_id,
+          promptTitle: prompt.title,
+          promptId: intent.prompt_id,
+          buyerName: buyerRow.display_name ?? `@${buyerRow.username}`,
+          amountSol: expectedPriceSol,
+          earnedSol: (expectedPriceSol * CREATOR_SHARE_BPS) / 10_000,
+        });
+      }
+    } catch (err) {
+      console.error("emailSale failed", err);
+    }
+  })();
 
   return NextResponse.json({ ok: true });
 }

@@ -6,6 +6,7 @@ import {
   findReferenceSignature,
   verifySingleTransferTransaction,
 } from "@/lib/solana";
+import { emailTip } from "@/lib/email/notify";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -102,6 +103,27 @@ export async function POST(req: NextRequest) {
     .from("tip_intents")
     .update({ consumed_at: new Date().toISOString(), consumed_signature: signature })
     .eq("reference", reference);
+
+  void (async () => {
+    try {
+      const { data: tipperRow } = await supabase
+        .from("users")
+        .select("display_name, username")
+        .eq("id", tipper.id)
+        .single();
+      if (tipperRow) {
+        await emailTip(supabase, {
+          creatorId: intent.creator_id,
+          tipperName: tipperRow.display_name ?? `@${tipperRow.username}`,
+          tipperUsername: tipperRow.username,
+          amountSol: expectedSol,
+          message: intent.message ?? null,
+        });
+      }
+    } catch (err) {
+      console.error("emailTip failed", err);
+    }
+  })();
 
   return NextResponse.json({ ok: true });
 }

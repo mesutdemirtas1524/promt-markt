@@ -8,6 +8,12 @@ export type SocialLinks = {
   github?: string;
 };
 
+export type EmailPrefs = {
+  sales?: boolean;
+  tips?: boolean;
+  follows?: boolean;
+};
+
 export type User = {
   id: string;
   privy_id: string;
@@ -18,6 +24,8 @@ export type User = {
   banner_url: string | null;
   bio: string | null;
   social_links: SocialLinks;
+  email: string | null;
+  email_prefs: EmailPrefs;
   follower_count?: number;
   following_count?: number;
   created_at: string;

@@ -17,6 +17,14 @@ const socialLinksSchema = z
   })
   .optional();
 
+const emailPrefsSchema = z
+  .object({
+    sales: z.boolean().optional(),
+    tips: z.boolean().optional(),
+    follows: z.boolean().optional(),
+  })
+  .optional();
+
 const bodySchema = z.object({
   username: z
     .string()
@@ -28,6 +36,7 @@ const bodySchema = z.object({
   avatar_url: z.string().url().max(500).nullable().optional(),
   banner_url: z.string().url().max(500).nullable().optional(),
   social_links: socialLinksSchema,
+  email_prefs: emailPrefsSchema,
 });
 
 export async function POST(req: NextRequest) {
@@ -73,6 +82,9 @@ export async function POST(req: NextRequest) {
       if (typeof v === "string" && v.trim()) cleaned[k] = v.trim();
     }
     updates.social_links = cleaned;
+  }
+  if (parsed.data.email_prefs !== undefined) {
+    updates.email_prefs = parsed.data.email_prefs;
   }
 
   const { error } = await supabase.from("users").update(updates).eq("id", user.id);

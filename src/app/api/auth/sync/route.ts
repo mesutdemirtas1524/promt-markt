@@ -25,10 +25,17 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (existing) {
+    const patch: Record<string, unknown> = {};
     if (body.wallet_address && existing.wallet_address !== body.wallet_address) {
+      patch.wallet_address = body.wallet_address;
+    }
+    if (body.email && existing.email !== body.email) {
+      patch.email = body.email;
+    }
+    if (Object.keys(patch).length > 0) {
       const { data: updated } = await supabase
         .from("users")
-        .update({ wallet_address: body.wallet_address })
+        .update(patch)
         .eq("id", existing.id)
         .select()
         .single();
@@ -54,6 +61,7 @@ export async function POST(req: NextRequest) {
     .insert({
       privy_id: privyId,
       wallet_address: body.wallet_address ?? null,
+      email: body.email ?? null,
       username,
     })
     .select()
