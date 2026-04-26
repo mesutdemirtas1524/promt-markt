@@ -11,6 +11,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const tabs = [
     { href: "/dashboard", label: t("dashboard.overview") },
+    { href: "/dashboard/notifications", label: "Notifications" },
     { href: "/dashboard/following", label: "Following" },
     { href: "/dashboard/listings", label: t("dashboard.myListings") },
     { href: "/dashboard/purchases", label: t("dashboard.myLibrary") },

@@ -12,6 +12,7 @@ import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
 import { useT } from "@/lib/i18n/provider";
 import { ThemeToggle } from "./theme-toggle";
 import { LocaleSwitcher } from "./locale-switcher";
+import { NotificationsBell } from "./notifications-bell";
 
 function formatSolBalance(sol: number): string {
   if (sol >= 100) return sol.toFixed(2);
@@ -76,6 +77,8 @@ export function Navbar() {
                   <span className="hidden sm:inline">{t("nav.create")}</span>
                 </Button>
               </Link>
+
+              <NotificationsBell />
 
               <Link href="/dashboard/favorites">
                 <Button variant="ghost" size="icon" aria-label={t("nav.favorites")} className="h-9 w-9">
