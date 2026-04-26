@@ -108,7 +108,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
   const moreFromCreator = otherPrompts.filter((p) => p.id !== prompt.id).slice(0, 6);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="w-full px-4 py-10 sm:px-6 lg:px-10 xl:px-16">
       {!isRemoved && <ViewTracker promptId={prompt.id} />}
       {isRemoved && (
         <div className="mb-6 rounded-xl border border-red-500/25 bg-red-500/[0.06] p-4 text-sm">

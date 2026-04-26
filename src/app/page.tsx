@@ -38,7 +38,7 @@ export default async function HomePage({
     stats.recentVolumeSol > 0;
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
+    <div className="w-full px-4 py-8 sm:px-6 lg:px-10 xl:px-16">
       <section className="relative mb-10 overflow-hidden rounded-2xl border border-border">
         <div className="absolute inset-0 bg-grid opacity-50" />
         <div

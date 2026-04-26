@@ -123,7 +123,7 @@ export default async function ReceiptPage({
   const wallet = r.buyer?.wallet_address ?? "";
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+    <div className="w-full px-4 py-12 sm:px-6 lg:px-10 xl:px-16">
       {/* Hero */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card">
         <div

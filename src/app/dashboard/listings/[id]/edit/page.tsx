@@ -31,7 +31,7 @@ export default async function EditPromptPage({ params }: { params: Promise<{ id:
   const platformIds = ((prompt.platforms ?? []) as { platform_id: number }[]).map((p) => p.platform_id);
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       <h2 className="mb-6 text-lg font-semibold">Edit prompt</h2>
       <EditPromptForm
         promptId={prompt.id}

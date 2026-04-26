@@ -12,7 +12,7 @@ export default async function BackfillPage() {
     redirect("/");
   }
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+    <div className="w-full px-4 py-10 sm:px-6 lg:px-10 xl:px-16">
       <h1 className="text-2xl font-semibold tracking-tight">Backfill image dimensions</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         One-time admin task. Loads each image without stored width/height in the browser, reads the

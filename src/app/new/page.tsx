@@ -15,7 +15,7 @@ export default async function NewArrivalsPage() {
   const prompts = await fetchPromptCards({ orderBy: "newest", limit: 60 });
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-10 sm:px-6">
+    <div className="w-full px-4 py-10 sm:px-6 lg:px-10 xl:px-16">
       <header className="mb-8">
         <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium tracking-wider text-violet-300">
           <Sparkles className="h-3 w-3" />

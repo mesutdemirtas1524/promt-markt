@@ -8,7 +8,7 @@ export default async function UploadPage() {
   const [categories, platforms] = await Promise.all([fetchCategories(), fetchPlatforms()]);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+    <div className="w-full px-4 py-8 sm:px-6 lg:px-10 xl:px-16">
       <h1 className="mb-2 text-2xl font-bold">Sell a prompt</h1>
       <p className="mb-8 text-sm text-muted-foreground">
         Upload 1–6 example images, enter the prompt text, and set a price. Buyers only see the prompt

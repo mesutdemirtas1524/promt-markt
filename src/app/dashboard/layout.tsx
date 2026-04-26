@@ -22,7 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="w-full px-4 py-10 sm:px-6 lg:px-10 xl:px-16">
       <h1 className="mb-7 text-3xl font-semibold tracking-tight">
         {t("nav.dashboard")}
       </h1>

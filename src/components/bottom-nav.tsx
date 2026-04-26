@@ -29,7 +29,7 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border glass-strong md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="mx-auto flex h-14 max-w-md items-center justify-around px-2">
+      <div className="flex h-14 w-full items-center justify-around px-2">
         <NavItem href="/" label="Home" active={isActive("/")}>
           <Home className="h-5 w-5" />
         </NavItem>

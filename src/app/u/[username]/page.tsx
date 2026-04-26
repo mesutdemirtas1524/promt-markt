@@ -85,7 +85,7 @@ export default async function UserProfilePage({
   const items = tab === "favorites" ? favorites : prompts;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="w-full px-4 py-10 sm:px-6 lg:px-10 xl:px-16">
       {/* Profile header — banner + content */}
       <div className="relative mb-10 overflow-hidden rounded-2xl border border-border">
         {user.banner_url ? (

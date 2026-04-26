@@ -5,7 +5,7 @@ export const revalidate = 86400;
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
+    <div className="w-full px-4 py-14 sm:px-6 lg:px-10 xl:px-16">
       <nav className="mb-8 flex flex-wrap gap-1 border-b border-border text-sm">
         <LegalTab href="/legal/terms">Terms</LegalTab>
         <LegalTab href="/legal/privacy">Privacy</LegalTab>

@@ -16,7 +16,7 @@ export default async function CreatorsPage() {
   const creators = await fetchTrendingCreators(30, 60);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="w-full px-4 py-10 sm:px-6 lg:px-10 xl:px-16">
       <header className="mb-8">
         <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium tracking-wider text-violet-300">
           <Trophy className="h-3 w-3" />

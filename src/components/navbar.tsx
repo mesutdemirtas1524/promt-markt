@@ -32,32 +32,44 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 w-full glass-strong">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <div className="flex items-center gap-7">
-          <Link href="/" className="group flex items-center gap-2.5">
+      <div className="flex h-16 w-full items-center justify-between gap-4 px-4 sm:h-[72px] sm:px-6 lg:px-10 xl:px-16">
+        <div className="flex items-center gap-8">
+          <Link href="/" className="group flex items-center gap-3">
             <Image
               src="/pm-logo.svg"
               alt="Promt Markt"
-              width={28}
-              height={28}
+              width={34}
+              height={34}
               priority
               className="transition-transform duration-300 group-hover:rotate-[-8deg]"
             />
-            <span className="hidden text-[15px] font-semibold tracking-tight sm:block">
+            <span className="hidden text-[16px] font-semibold tracking-tight sm:block">
               Promt Markt
             </span>
           </Link>
           <nav className="hidden items-center gap-1 text-sm md:flex">
             <Link
               href="/explore"
-              className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-tint-2 hover:text-foreground"
+              className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-tint-2 hover:text-foreground"
             >
               {t("nav.explore")}
+            </Link>
+            <Link
+              href="/new"
+              className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-tint-2 hover:text-foreground"
+            >
+              New
+            </Link>
+            <Link
+              href="/creators"
+              className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-tint-2 hover:text-foreground"
+            >
+              Creators
             </Link>
           </nav>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => router.push("/explore")}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-tint-2 hover:text-foreground md:hidden"
