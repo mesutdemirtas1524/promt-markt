@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { fetchPromptDetail, fetchCreatorStats, fetchPromptCards } from "@/lib/queries";
+import {
+  fetchPromptDetail,
+  fetchCreatorStats,
+  fetchPromptCards,
+  fetchSimilarPrompts,
+} from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
 import { getServerT } from "@/lib/i18n/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
@@ -85,12 +90,19 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
   const isRemoved = prompt.status === "removed";
 
   // Side fetches for trust signals: creator's other prompts + cumulative stats
-  const [creatorStats, otherPrompts] = await Promise.all([
+  const [creatorStats, otherPrompts, similar] = await Promise.all([
     fetchCreatorStats(prompt.creator.id),
     fetchPromptCards({
       creatorId: prompt.creator.id,
       orderBy: "newest",
       limit: 8,
+    }),
+    fetchSimilarPrompts({
+      promptId: prompt.id,
+      excludeCreatorId: prompt.creator.id,
+      categoryId: prompt.category?.id ?? null,
+      platformIds: (prompt.platforms as Array<{ id: number }>).map((p) => p.id),
+      limit: 6,
     }),
   ]);
   const moreFromCreator = otherPrompts.filter((p) => p.id !== prompt.id).slice(0, 6);
@@ -261,6 +273,25 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
           </div>
           <PromptMasonry>
             {moreFromCreator.map((p) => (
+              <PromptCard key={p.id} prompt={p} />
+            ))}
+          </PromptMasonry>
+        </section>
+      )}
+
+      {similar.length > 0 && (
+        <section className="mt-16">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-base font-semibold tracking-tight">You might also like</h2>
+            <Link
+              href="/explore"
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Browse more →
+            </Link>
+          </div>
+          <PromptMasonry>
+            {similar.map((p) => (
               <PromptCard key={p.id} prompt={p} />
             ))}
           </PromptMasonry>

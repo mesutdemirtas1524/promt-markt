@@ -372,6 +372,111 @@ export async function fetchTrendingCreators(days = 30, limit = 24): Promise<Tren
 }
 
 /**
+ * "You might also like" — cross-creator recommendations for a prompt.
+ *
+ * Score: same category (+3) + at least one shared platform (+2 each) +
+ * recency tiebreaker. Excludes the source creator (those are shown in
+ * "More from creator") and the source prompt itself.
+ */
+export async function fetchSimilarPrompts(opts: {
+  promptId: string;
+  excludeCreatorId: string;
+  categoryId: number | null;
+  platformIds: number[];
+  limit?: number;
+}): Promise<PromptCardData[]> {
+  const supabase = createSupabaseServiceClient();
+  const limit = opts.limit ?? 6;
+
+  // Pull a candidate pool: same category OR shares a platform. We over-fetch
+  // and re-rank in JS because PostgREST can't easily express the scoring.
+  const candidateIds = new Set<string>();
+
+  if (opts.categoryId !== null) {
+    const { data } = await supabase
+      .from("prompts")
+      .select("id")
+      .eq("status", "active")
+      .eq("category_id", opts.categoryId)
+      .neq("creator_id", opts.excludeCreatorId)
+      .neq("id", opts.promptId)
+      .order("purchase_count", { ascending: false })
+      .limit(40);
+    for (const r of data ?? []) candidateIds.add(r.id as string);
+  }
+
+  if (opts.platformIds.length > 0) {
+    const { data } = await supabase
+      .from("prompt_platforms")
+      .select("prompt_id, prompt:prompts!inner(creator_id, status)")
+      .in("platform_id", opts.platformIds)
+      .neq("prompt_id", opts.promptId);
+    for (const row of (data ?? []) as Array<{
+      prompt_id: string;
+      prompt: { creator_id: string; status: string } | { creator_id: string; status: string }[] | null;
+    }>) {
+      const p = Array.isArray(row.prompt) ? row.prompt[0] : row.prompt;
+      if (!p || p.status !== "active" || p.creator_id === opts.excludeCreatorId) continue;
+      candidateIds.add(row.prompt_id);
+    }
+  }
+
+  if (candidateIds.size === 0) return [];
+
+  const { data: rows } = await supabase
+    .from("prompts")
+    .select(
+      `
+      id, title, price_sol, avg_rating, rating_count, created_at, category_id, purchase_count, favorite_count, status,
+      creator:users!creator_id ( username ),
+      images:prompt_images ( image_url, position, width, height ),
+      platforms:prompt_platforms ( platform_id )
+    `
+    )
+    .in("id", Array.from(candidateIds))
+    .eq("status", "active");
+
+  const sourcePlatforms = new Set(opts.platformIds);
+  const scored = (rows ?? []).map((p) => {
+    const platforms = (p.platforms ?? []) as { platform_id: number }[];
+    const sharedPlatforms = platforms.filter((pl) => sourcePlatforms.has(pl.platform_id)).length;
+    const score =
+      (p.category_id === opts.categoryId ? 3 : 0) +
+      sharedPlatforms * 2 +
+      Math.min(2, Math.log10((p.purchase_count ?? 0) + 1)) +
+      Math.min(1, (Number(p.avg_rating ?? 0) - 3) / 2);
+    return { p, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  return scored.slice(0, limit).map(({ p }) => {
+    const imgs = (p.images ?? []) as {
+      image_url: string;
+      position: number;
+      width: number | null;
+      height: number | null;
+    }[];
+    imgs.sort((a, b) => a.position - b.position);
+    const cover = imgs[0];
+    const creator = Array.isArray(p.creator) ? p.creator[0] : p.creator;
+    return {
+      id: p.id,
+      title: p.title,
+      price_sol: Number(p.price_sol),
+      avg_rating: p.avg_rating === null ? null : Number(p.avg_rating),
+      rating_count: p.rating_count,
+      favorite_count: p.favorite_count ?? 0,
+      cover_image: cover?.image_url ?? null,
+      cover_width: cover?.width ?? null,
+      cover_height: cover?.height ?? null,
+      creator_username: creator?.username ?? "unknown",
+      status: (p.status as "active" | "removed") ?? "active",
+    };
+  });
+}
+
+/**
  * Lightweight creator profile stats — total active prompts + total sales
  * across all of them. Shown on the prompt detail page next to the creator
  * card as a trust signal.
