@@ -238,23 +238,56 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let prompt: any = null;
   const full = await supabase.from("prompts").select(fullSelect).eq("id", promptId).maybeSingle();
-  if (full.error) {
-    console.warn(
-      "fetchPromptDetail: full select failed, retrying without join:",
-      full.error.message
-    );
+  console.log("fetchPromptDetail.full", {
+    promptId,
+    hasData: !!full.data,
+    error: full.error?.message ?? null,
+    errorCode: full.error?.code ?? null,
+    errorDetails: full.error?.details ?? null,
+  });
+  if (full.error || !full.data) {
+    if (full.error) {
+      console.warn(
+        "fetchPromptDetail: full select failed, retrying without join:",
+        full.error.message
+      );
+    } else {
+      console.warn(
+        "fetchPromptDetail: full select returned no data, retrying without join for id",
+        promptId
+      );
+    }
     const lite = await supabase
       .from("prompts")
       .select(fallbackSelect)
       .eq("id", promptId)
       .maybeSingle();
+    console.log("fetchPromptDetail.lite", {
+      promptId,
+      hasData: !!lite.data,
+      error: lite.error?.message ?? null,
+      errorCode: lite.error?.code ?? null,
+      errorDetails: lite.error?.details ?? null,
+    });
     prompt = lite.data ?? null;
   } else {
-    prompt = full.data ?? null;
+    prompt = full.data;
   }
 
   if (!prompt) {
-    console.warn("fetchPromptDetail: no prompt row returned for id", promptId);
+    // Last-resort: a bare select to confirm whether the row exists at all
+    // when we strip every join. If THIS comes back empty, the issue is
+    // either auth (unlikely with service client) or a literal absence.
+    const bare = await supabase
+      .from("prompts")
+      .select("id, status, creator_id, title")
+      .eq("id", promptId)
+      .maybeSingle();
+    console.warn("fetchPromptDetail: no prompt row from joined queries", {
+      promptId,
+      bareData: bare.data,
+      bareError: bare.error?.message ?? null,
+    });
     return null;
   }
 
