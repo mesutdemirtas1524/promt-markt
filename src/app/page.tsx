@@ -71,17 +71,10 @@ export default async function HomePage({
   return (
     <div className="w-full">
       {/* Compact hero: just the search bar + a thin stats strip. The
-          marketplace itself is the page; the hero stays out of its way. */}
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-grid opacity-40" />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 80% at 30% 50%, var(--ambient-a), transparent 70%), radial-gradient(ellipse 50% 80% at 95% 50%, var(--ambient-b), transparent 70%)",
-          }}
-        />
-        <div className="relative w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-10 xl:px-16">
+          ambient grid + gradient now lives on <body> so we don't repeat
+          it locally — the band just borders below for visual separation. */}
+      <section className="border-b border-border">
+        <div className="w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-10 xl:px-16">
           <div className="mx-auto max-w-2xl">
             <DiscoverSearch
               initialValue={search}

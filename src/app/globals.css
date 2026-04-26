@@ -106,14 +106,30 @@ html, body {
   border-color: var(--border);
 }
 
-/* Subtle ambient background — soft gradient blobs anchored to the page */
+/* Site-wide ambient background — two radial blobs + a faint grid.
+   Both layers are fixed so the backdrop stays put as the page scrolls,
+   and pointer-events:none lets clicks pass through. The grid uses
+   the same .bg-grid pattern utility, so any tweak there propagates. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 70% 50% at 15% -10%, var(--ambient-a), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 85% 110%, var(--ambient-b), transparent 60%);
+    radial-gradient(ellipse 70% 80% at 30% 50%, var(--ambient-a), transparent 70%),
+    radial-gradient(ellipse 50% 80% at 95% 50%, var(--ambient-b), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.4;
   pointer-events: none;
   z-index: 0;
 }
