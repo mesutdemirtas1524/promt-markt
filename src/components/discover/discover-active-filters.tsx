@@ -26,8 +26,9 @@ export function DiscoverActiveFilters({
   if (plat) chips.push({ label: plat.name, href: hrefWithout(sp, "platform") });
   if (sp.price && sp.price !== "all") chips.push({ label: sp.price === "free" ? "Free" : "Paid", href: hrefWithout(sp, "price") });
   if (hasPriceRange) {
-    const range = `${sp.min || "0"}–${sp.max || "∞"} SOL`;
-    chips.push({ label: range, href: hrefWithout(sp, "min", "max") });
+    const lo = sp.min ? `$${sp.min}` : "$0";
+    const hi = sp.max ? `$${sp.max}` : "∞";
+    chips.push({ label: `${lo}–${hi}`, href: hrefWithout(sp, "min", "max") });
   }
 
   if (chips.length === 0) return null;
