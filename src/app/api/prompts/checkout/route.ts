@@ -14,6 +14,7 @@ export const runtime = "nodejs";
 const bodySchema = z.object({
   prompt_id: z.string().uuid(),
   buyer_wallet: z.string().min(32).max(44),
+  promo_code: z.string().min(1).max(40).optional(),
 });
 
 /**
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { prompt_id, buyer_wallet } = parsed.data;
+  const { prompt_id, buyer_wallet, promo_code } = parsed.data;
 
   const supabase = createSupabaseServiceClient();
 
@@ -92,7 +93,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Creator wallet missing" }, { status: 400 });
   }
 
-  const total = solToLamports(Number(prompt.price_sol));
+  // Apply a promo code if the buyer attached one. Re-validates server-side
+  // so the UI can't fake a discount.
+  let promoCodeId: string | null = null;
+  let promoDiscountPercent: number | null = null;
+  let priceSol = Number(prompt.price_sol);
+  if (promo_code) {
+    const { data: promo } = await supabase
+      .from("promo_codes")
+      .select("id, creator_id, discount_percent, max_uses, uses, expires_at, active")
+      .ilike("code", promo_code)
+      .maybeSingle();
+    if (!promo) return NextResponse.json({ error: "Promo code not found" }, { status: 400 });
+    if (promo.creator_id !== prompt.creator_id) {
+      return NextResponse.json({ error: "Promo code doesn't apply" }, { status: 400 });
+    }
+    if (!promo.active) return NextResponse.json({ error: "Promo code is disabled" }, { status: 400 });
+    if (promo.expires_at && new Date(promo.expires_at).getTime() < Date.now()) {
+      return NextResponse.json({ error: "Promo code expired" }, { status: 400 });
+    }
+    if (promo.max_uses !== null && promo.uses >= promo.max_uses) {
+      return NextResponse.json({ error: "Promo code fully redeemed" }, { status: 400 });
+    }
+    const { count: usedByMe } = await supabase
+      .from("promo_redemptions")
+      .select("id", { count: "exact", head: true })
+      .eq("code_id", promo.id)
+      .eq("buyer_id", buyer.id)
+      .eq("prompt_id", prompt_id);
+    if ((usedByMe ?? 0) > 0) {
+      return NextResponse.json({ error: "Promo already used on this prompt" }, { status: 400 });
+    }
+    promoCodeId = promo.id;
+    promoDiscountPercent = promo.discount_percent;
+    priceSol = priceSol * (1 - promo.discount_percent / 100);
+  }
+
+  const total = solToLamports(priceSol);
   const { creatorLamports, platformLamports } = splitLamports(total);
   const reference = generatePurchaseReference();
 
@@ -106,6 +143,8 @@ export async function POST(req: NextRequest) {
     expected_buyer_wallet: buyer_wallet,
     expected_creator_wallet: creator.wallet_address,
     expected_platform_wallet: PLATFORM_WALLET,
+    promo_code_id: promoCodeId,
+    promo_discount_percent: promoDiscountPercent,
   });
   if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
 

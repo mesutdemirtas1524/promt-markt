@@ -10,7 +10,7 @@ import { PublicKey, SystemProgram, Transaction, Connection } from "@solana/web3.
 import bs58 from "bs58";
 import { SOLANA_RPC_URL, SOLANA_NETWORK } from "@/lib/constants";
 import { formatSol } from "@/lib/utils";
-import { Loader2, Lock, Star } from "lucide-react";
+import { Loader2, Lock, Star, Tag, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
@@ -44,6 +44,50 @@ export function PromptDetailActions(props: Props) {
   const [buying, setBuying] = useState(false);
   const [submittingRating, setSubmittingRating] = useState(false);
   const [localRating, setLocalRating] = useState<number | null>(props.myRating);
+
+  const [promoInput, setPromoInput] = useState("");
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [applyingPromo, setApplyingPromo] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<{
+    code: string;
+    discount_percent: number;
+  } | null>(null);
+
+  const effectivePriceSol = appliedPromo
+    ? props.priceSol * (1 - appliedPromo.discount_percent / 100)
+    : props.priceSol;
+  const effectivePriceUsd = solToUsdString(effectivePriceSol, usd);
+
+  async function applyPromo() {
+    if (!authenticated) {
+      login();
+      return;
+    }
+    const code = promoInput.trim();
+    if (!code) return;
+    setApplyingPromo(true);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch("/api/promos/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code, prompt_id: props.promptId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Invalid code");
+      setAppliedPromo({ code, discount_percent: data.discount_percent });
+      toast.success(`${data.discount_percent}% off applied`);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setApplyingPromo(false);
+    }
+  }
+
+  function clearPromo() {
+    setAppliedPromo(null);
+    setPromoInput("");
+  }
 
   const buyerWallet = wallets[0];
 
@@ -145,6 +189,7 @@ export function PromptDetailActions(props: Props) {
         body: JSON.stringify({
           prompt_id: props.promptId,
           buyer_wallet: buyerWallet.address,
+          ...(appliedPromo ? { promo_code: appliedPromo.code } : {}),
         }),
       });
       const checkout = await checkoutRes.json();
@@ -324,6 +369,60 @@ export function PromptDetailActions(props: Props) {
         )}
       </div>
 
+      {!props.hasAccess && !props.isOwnPrompt && props.priceSol > 0 && (
+        <div className="rounded-xl border border-border bg-tint-1 p-3">
+          {appliedPromo ? (
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
+                <Tag className="h-3 w-3" />
+                <span className="font-mono uppercase">{appliedPromo.code}</span>
+                <span>· {appliedPromo.discount_percent}% off</span>
+              </span>
+              <button
+                type="button"
+                onClick={clearPromo}
+                className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" /> remove
+              </button>
+            </div>
+          ) : promoOpen ? (
+            <div className="flex items-center gap-2">
+              <input
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                placeholder="PROMO CODE"
+                className="h-8 flex-1 rounded-md border border-border bg-tint-2 px-2.5 font-mono text-xs uppercase tracking-wider outline-none focus:border-violet-400/50"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    applyPromo();
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={applyPromo}
+                disabled={applyingPromo || !promoInput.trim()}
+                className="h-8"
+              >
+                {applyingPromo ? <Loader2 className="h-3 w-3 animate-spin" /> : "Apply"}
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPromoOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Tag className="h-3 w-3" />
+              Have a promo code?
+            </button>
+          )}
+        </div>
+      )}
+
       {!props.hasAccess && !props.isOwnPrompt && (
         <Button
           onClick={handlePurchase}
@@ -339,6 +438,14 @@ export function PromptDetailActions(props: Props) {
             </>
           ) : props.priceSol === 0 ? (
             t("detail.unlockFree")
+          ) : appliedPromo ? (
+            <>
+              {t("detail.buyFor")} {formatSol(effectivePriceSol)} SOL
+              {effectivePriceUsd && <span className="opacity-70">· {effectivePriceUsd}</span>}
+              <span className="ml-1.5 text-xs line-through opacity-50">
+                {formatSol(props.priceSol)}
+              </span>
+            </>
           ) : (
             <>
               {t("detail.buyFor")} {formatSol(props.priceSol)} SOL

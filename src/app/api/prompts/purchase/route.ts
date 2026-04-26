@@ -101,13 +101,17 @@ export async function POST(req: NextRequest) {
   // Atomic-ish: insert the purchase, then mark the intent consumed. If the
   // intent update fails after insert, a future confirm sees the
   // "already used" branch and returns success.
-  const { error: insErr } = await supabase.from("purchases").insert({
-    buyer_id: buyer.id,
-    prompt_id: intent.prompt_id,
-    price_paid_sol: expectedPriceSol,
-    tx_signature: signature,
-    reference,
-  });
+  const { data: insertedPurchase, error: insErr } = await supabase
+    .from("purchases")
+    .insert({
+      buyer_id: buyer.id,
+      prompt_id: intent.prompt_id,
+      price_paid_sol: expectedPriceSol,
+      tx_signature: signature,
+      reference,
+    })
+    .select("id")
+    .single();
   if (insErr) {
     // Race condition: another concurrent confirm beat us. If the row exists
     // for this signature, treat as success.
@@ -115,6 +119,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, already: true });
     }
     return NextResponse.json({ error: insErr.message }, { status: 500 });
+  }
+
+  if (intent.promo_code_id && intent.promo_discount_percent) {
+    await supabase.from("promo_redemptions").insert({
+      code_id: intent.promo_code_id,
+      buyer_id: buyer.id,
+      prompt_id: intent.prompt_id,
+      purchase_id: insertedPurchase?.id ?? null,
+      discount_percent: intent.promo_discount_percent,
+    });
   }
 
   await supabase
