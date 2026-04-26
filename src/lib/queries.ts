@@ -217,19 +217,24 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   // hasn't been migrated yet, retry without it so the detail page still
   // renders — we'll just have the legacy single category until the
   // operator runs migration 015.
+  // PostgREST disambiguation: now that prompt_categories exists there are
+  // TWO relationships between prompts and categories — the legacy
+  // prompts.category_id FK and the new join table. Embedding `categories`
+  // without naming the path silently breaks the whole query. We pin each
+  // join to its FK column with the !fk_column hint.
   const fullSelect = `
       *,
       creator:users!creator_id ( id, username, display_name, avatar_url, wallet_address ),
       images:prompt_images ( id, image_url, position, width, height ),
-      category:categories ( id, name, slug ),
-      categories:prompt_categories ( categories ( id, name, slug ) ),
+      category:categories!category_id ( id, name, slug ),
+      categories:prompt_categories ( category:categories!category_id ( id, name, slug ) ),
       platforms:prompt_platforms ( platforms ( id, name, slug ) )
     `;
   const fallbackSelect = `
       *,
       creator:users!creator_id ( id, username, display_name, avatar_url, wallet_address ),
       images:prompt_images ( id, image_url, position, width, height ),
-      category:categories ( id, name, slug ),
+      category:categories!category_id ( id, name, slug ),
       platforms:prompt_platforms ( platforms ( id, name, slug ) )
     `;
 
@@ -348,8 +353,10 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   const platforms = ((prompt.platforms ?? []) as Array<{ platforms: unknown }>)
     .map((row) => (Array.isArray(row.platforms) ? row.platforms[0] : row.platforms))
     .filter(Boolean);
-  const categoriesList = ((prompt.categories ?? []) as Array<{ categories: unknown }>)
-    .map((row) => (Array.isArray(row.categories) ? row.categories[0] : row.categories))
+  // The join row has shape `{ category: { id, name, slug } }` (we aliased
+  // the inner embed to disambiguate the relationship to categories).
+  const categoriesList = ((prompt.categories ?? []) as Array<{ category: unknown }>)
+    .map((row) => (Array.isArray(row.category) ? row.category[0] : row.category))
     .filter(Boolean);
   // If the join table is empty (legacy row), fall back to the single
   // category column so the badges still render something.
