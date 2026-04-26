@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { X, ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/provider";
@@ -13,6 +13,8 @@ type Img = {
   width?: number | null;
   height?: number | null;
 };
+
+const SWIPE_PX = 50; // touch threshold to count as a swipe
 
 export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
   const [index, setIndex] = useState(0);
@@ -41,15 +43,64 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [next, prev, fullscreen]);
 
-  // Lock body scroll while fullscreen is open
+  // Lock body scroll while fullscreen is open + manage focus trap
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!fullscreen) return;
-    const prev = document.body.style.overflow;
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    previousFocus.current = document.activeElement as HTMLElement | null;
+    // Move focus inside the dialog so Tab cycles within it
+    setTimeout(() => {
+      const first = dialogRef.current?.querySelector<HTMLElement>(
+        "button, [href], input, [tabindex]:not([tabindex='-1'])"
+      );
+      first?.focus();
+    }, 0);
+    const onTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusables = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          "button, [href], input, [tabindex]:not([tabindex='-1'])"
+        )
+      ).filter((el) => !el.hasAttribute("disabled"));
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onTab);
     return () => {
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onTab);
+      previousFocus.current?.focus();
     };
   }, [fullscreen]);
+
+  // Swipe detection (works for both inline slider and fullscreen modal)
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (!touchStart.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    touchStart.current = null;
+    // Only treat as swipe if mostly horizontal and over threshold
+    if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx > 0) prev();
+    else next();
+  }
 
   if (images.length === 0) return null;
   const current = images[safeIndex];
@@ -58,7 +109,11 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
     <>
       <div className="space-y-3">
         {/* Main slider */}
-        <div className="group relative overflow-hidden rounded-2xl border border-border bg-black/40">
+        <div
+          className="group relative overflow-hidden rounded-2xl border border-border bg-black/40"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
           <button
             type="button"
             onClick={() => setFullscreen(true)}
@@ -129,10 +184,14 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
       {/* Fullscreen lightbox */}
       {fullscreen && (
         <div
+          ref={dialogRef}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm"
           onClick={() => setFullscreen(false)}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
           role="dialog"
           aria-modal="true"
+          aria-label={alt}
         >
           <button
             type="button"
