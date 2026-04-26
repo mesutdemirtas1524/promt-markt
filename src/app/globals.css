@@ -130,6 +130,43 @@ h1, h2, h3, h4 {
 h1 { letter-spacing: -0.035em; }
 
 @layer utilities {
+  /* Long-form copy used by /legal/* pages. Tight prose with theme-aware
+     colours and just enough rhythm between blocks. */
+  .prose-legal {
+    color: var(--foreground);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .prose-legal h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .prose-legal h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 36px;
+    margin-bottom: 10px;
+  }
+  .prose-legal p { margin: 12px 0; }
+  .prose-legal ul {
+    list-style: disc;
+    padding-left: 22px;
+    margin: 12px 0;
+  }
+  .prose-legal li { margin: 6px 0; }
+  .prose-legal a {
+    color: rgb(167, 139, 250);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .prose-legal strong { color: var(--foreground); font-weight: 600; }
+  .prose-legal .meta {
+    color: var(--muted-foreground);
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+
   .blur-prompt {
     filter: blur(6px);
     user-select: none;

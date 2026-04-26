@@ -13,12 +13,21 @@ export async function Footer() {
           <span className="text-sm font-medium tracking-tight">{APP_NAME}</span>
           <span className="ml-1 text-xs text-muted-foreground">· {t("footer.tagline")}</span>
         </div>
-        <div className="flex items-center gap-5 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
           <Link href="/explore" className="transition-colors hover:text-foreground">
             {t("nav.explore")}
           </Link>
           <Link href="/upload" className="transition-colors hover:text-foreground">
             {t("footer.sell")}
+          </Link>
+          <Link href="/legal/terms" className="transition-colors hover:text-foreground">
+            Terms
+          </Link>
+          <Link href="/legal/privacy" className="transition-colors hover:text-foreground">
+            Privacy
+          </Link>
+          <Link href="/legal/refund" className="transition-colors hover:text-foreground">
+            Refunds
           </Link>
           <a
             href="https://github.com/mesutdemirtas1524/promt-markt"
