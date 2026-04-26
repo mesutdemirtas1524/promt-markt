@@ -6,8 +6,7 @@ import { Badge } from "./ui/badge";
 import { Star, Heart, ShoppingBag } from "lucide-react";
 import { FavoriteButton } from "./favorite-button";
 import { useFavorites } from "@/hooks/use-favorites";
-import { useSolPrice } from "@/hooks/use-sol-price";
-import { formatSol, formatUsd } from "@/lib/utils";
+import { formatUsd } from "@/lib/utils";
 import { SolLogo } from "./sol-logo";
 
 export type PromptCardData = {
@@ -29,7 +28,6 @@ export type PromptCardData = {
 
 export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const { isFavorited } = useFavorites();
-  const { usd: solUsd } = useSolPrice();
   const favorited = isFavorited(prompt.id);
   const isRemoved = prompt.status === "removed";
   const isFree = prompt.price_usd <= 0;
@@ -39,9 +37,6 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
     prompt.cover_width && prompt.cover_height
       ? { aspectRatio: `${prompt.cover_width} / ${prompt.cover_height}` }
       : undefined;
-
-  // Live SOL equivalent for the price pill subtitle.
-  const solValue = !isFree && solUsd ? prompt.price_usd / solUsd : prompt.price_sol;
 
   return (
     <div className="ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
@@ -74,16 +69,11 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
                 Free
               </span>
             ) : (
-              <span className="flex flex-col items-end rounded-lg border border-white/10 bg-black/65 px-2.5 py-1 text-white shadow-sm backdrop-blur-md">
-                <span className="text-[13px] font-bold tabular-nums leading-none">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/65 px-2.5 py-1 text-white shadow-sm backdrop-blur-md">
+                <SolLogo className="h-3 w-3" />
+                <span className="text-[12px] font-bold tabular-nums leading-none">
                   {formatUsd(prompt.price_usd)}
                 </span>
-                {solValue > 0 && (
-                  <span className="mt-0.5 inline-flex items-center gap-0.5 text-[9px] tabular-nums opacity-75 leading-none">
-                    <SolLogo className="h-2 w-2" />
-                    {formatSol(solValue)}
-                  </span>
-                )}
               </span>
             )}
             {isRemoved && <Badge variant="destructive">Removed</Badge>}
