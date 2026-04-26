@@ -9,6 +9,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { PromptCard, PromptMasonry } from "@/components/prompt-card";
 import { FollowButton } from "@/components/follow-button";
 import { TipButton } from "@/components/tip-button";
+import { ReportButton } from "@/components/report-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PromptDetailActions } from "@/components/prompt-detail-actions";
@@ -218,6 +219,12 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
                 </Button>
               </Link>
               <OwnerActions promptId={prompt.id} />
+            </div>
+          )}
+
+          {!isOwnPrompt && (
+            <div className="flex justify-end">
+              <ReportButton promptId={prompt.id} />
             </div>
           )}
 
