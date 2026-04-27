@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "./ui/badge";
 import { Star, Heart, ShoppingBag } from "lucide-react";
 import { FavoriteButton } from "./favorite-button";
 import { useFavorites } from "@/hooks/use-favorites";
-import { formatUsd } from "@/lib/utils";
+import { formatUsd, cn } from "@/lib/utils";
+import { renderImageUrl } from "@/lib/image";
 import { SolLogo } from "./sol-logo";
 
 export type PromptCardData = {
@@ -21,10 +23,16 @@ export type PromptCardData = {
   cover_image: string | null;
   cover_width?: number | null;
   cover_height?: number | null;
+  /** All gallery image URLs in display order (cover first if it's part of the gallery).
+   *  Used to cycle through images on hover. Capped server-side to keep payload small. */
+  gallery_images?: string[];
   creator_username: string;
   creator_avatar_url?: string | null;
   status?: "active" | "removed";
 };
+
+const HOVER_CYCLE_MS = 800;
+const PREVIEW_WIDTH = 700;
 
 export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const { isFavorited } = useFavorites();
@@ -32,7 +40,40 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const isRemoved = prompt.status === "removed";
   const isFree = prompt.price_usd <= 0;
 
-  const renderUrl = prompt.cover_image;
+  // Combine cover + gallery, dedupe URL repeats. The cover is what we
+  // render at rest; the rest become the hover-cycle frames.
+  const images = useMemo(() => {
+    const all = [prompt.cover_image, ...(prompt.gallery_images ?? [])].filter(
+      (u): u is string => Boolean(u)
+    );
+    return Array.from(new Set(all));
+  }, [prompt.cover_image, prompt.gallery_images]);
+  const hasMultiple = images.length > 1;
+
+  const [hovered, setHovered] = useState(false);
+  const [active, setActive] = useState(0);
+  // Don't request the extra frames until the user actually hovers — keeps
+  // initial feed payload light. Once flipped, stays true so the user can
+  // re-hover without refetching.
+  const [loadedExtras, setLoadedExtras] = useState(false);
+
+  useEffect(() => {
+    if (!hovered || !hasMultiple) return;
+    if (!loadedExtras) setLoadedExtras(true);
+    const id = window.setInterval(() => {
+      setActive((i) => (i + 1) % images.length);
+    }, HOVER_CYCLE_MS);
+    return () => window.clearInterval(id);
+  }, [hovered, hasMultiple, images.length, loadedExtras]);
+
+  // Reset to the cover frame when the cursor leaves so the card looks
+  // identical to first-paint state.
+  useEffect(() => {
+    if (hovered) return;
+    const t = window.setTimeout(() => setActive(0), 200);
+    return () => window.clearTimeout(t);
+  }, [hovered]);
+
   // Clamp the displayed aspect ratio loosely — almost no cropping for the
   // common formats (9:16 portraits, square, 4:3, 3:2, 16:9). Only the very
   // extreme outliers (panoramic, columnar) get pulled back into range.
@@ -45,21 +86,70 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const aspectStyle = { aspectRatio: String(displayRatio) };
 
   return (
-    <div className="ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid">
+    <div
+      className="ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <Link href={`/prompt/${prompt.id}`} className="block" aria-label={prompt.title}>
         <div className="relative w-full overflow-hidden bg-muted" style={aspectStyle}>
-          {renderUrl ? (
+          {images.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+              No image
+            </div>
+          )}
+          {/* Cover frame — always loaded so the card paints fast. */}
+          {images[0] && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={renderUrl}
+              src={images[0]}
               alt={prompt.title}
               loading="lazy"
               decoding="async"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.04]"
+              className={cn(
+                "absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out group-hover:scale-[1.04]",
+                active === 0 ? "opacity-100" : "opacity-0"
+              )}
             />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-              No image
+          )}
+          {/* Extra frames — mounted only after first hover, then kept around. */}
+          {loadedExtras &&
+            images.slice(1).map((url, i) => {
+              const idx = i + 1;
+              return (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={url}
+                  src={renderImageUrl(url, { width: PREVIEW_WIDTH, quality: 75 }) ?? url}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className={cn(
+                    "absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out group-hover:scale-[1.04]",
+                    active === idx ? "opacity-100" : "opacity-0"
+                  )}
+                />
+              );
+            })}
+
+          {/* Frame dots — bottom-center pips that highlight the active
+              image while the user is hovering on a multi-image card. */}
+          {hasMultiple && (
+            <div
+              className={cn(
+                "pointer-events-none absolute bottom-2 left-1/2 z-[6] flex -translate-x-1/2 gap-1 transition-opacity duration-200",
+                hovered ? "opacity-100" : "opacity-0"
+              )}
+            >
+              {images.map((_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "h-1 rounded-full transition-all duration-200",
+                    i === active ? "w-4 bg-white" : "w-1 bg-white/55"
+                  )}
+                />
+              ))}
             </div>
           )}
 
