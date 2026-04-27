@@ -31,7 +31,7 @@ export type PromptCardData = {
   status?: "active" | "removed";
 };
 
-const HOVER_CYCLE_MS = 800;
+const HOVER_CYCLE_MS = 450;
 const PREVIEW_WIDTH = 700;
 
 export function PromptCard({ prompt }: { prompt: PromptCardData }) {
@@ -107,7 +107,7 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               loading="lazy"
               decoding="async"
               className={cn(
-                "absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out group-hover:scale-[1.04]",
+                "absolute inset-0 h-full w-full object-cover",
                 active === 0 ? "opacity-100" : "opacity-0"
               )}
             />
@@ -125,7 +125,7 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
                   loading="lazy"
                   decoding="async"
                   className={cn(
-                    "absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out group-hover:scale-[1.04]",
+                    "absolute inset-0 h-full w-full object-cover",
                     active === idx ? "opacity-100" : "opacity-0"
                   )}
                 />
