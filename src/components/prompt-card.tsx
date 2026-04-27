@@ -76,17 +76,15 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   // initial feed payload light. Once flipped, stays true so the user can
   // re-hover without refetching.
   const [loadedExtras, setLoadedExtras] = useState(false);
-  // Some older gallery rows have null width/height in the DB. Read the
-  // browser's naturalWidth/naturalHeight on load so we can pick the right
-  // fit strategy (cover vs contain) per frame.
+  // Stored DB dimensions can be missing or stale, so trust the browser's
+  // measured naturalWidth/naturalHeight as soon as the image decodes.
   const [measuredDims, setMeasuredDims] = useState<Record<string, { w: number; h: number }>>({});
 
-  function recordDim(url: string, e: React.SyntheticEvent<HTMLImageElement>) {
-    const img = e.currentTarget;
-    if (!img.naturalWidth || !img.naturalHeight) return;
+  function captureDims(el: HTMLImageElement, url: string) {
+    if (!el.naturalWidth || !el.naturalHeight) return;
     setMeasuredDims((prev) => {
       if (prev[url]) return prev;
-      return { ...prev, [url]: { w: img.naturalWidth, h: img.naturalHeight } };
+      return { ...prev, [url]: { w: el.naturalWidth, h: el.naturalHeight } };
     });
   }
 
@@ -109,16 +107,15 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
 
   // Card aspect tracks the active frame so each image fills the card
   // exactly — no crop, no letterbox, no zoom. Width is locked by the
-  // masonry column; only the height adapts as frames cycle. We loosen
-  // the clamp to [0.4, 2.5] so portraits/landscapes display close to
-  // their true ratio; only true panoramic/columnar outliers get reined
-  // in.
+  // masonry column; only the height adapts as frames cycle. Prefer
+  // browser-measured dims over DB values (DB can be wrong/stale); if
+  // measurement isn't ready yet, fall back to the cover ratio rather
+  // than activeFrame's possibly-wrong DB dims so we don't briefly use
+  // a bogus aspect and crop the image.
   const activeFrame = frames[active] ?? frames[0];
   const measured = activeFrame ? measuredDims[activeFrame.url] : undefined;
-  const w =
-    measured?.w ?? activeFrame?.width ?? prompt.cover_width ?? null;
-  const h =
-    measured?.h ?? activeFrame?.height ?? prompt.cover_height ?? null;
+  const w = measured?.w ?? prompt.cover_width ?? activeFrame?.width ?? null;
+  const h = measured?.h ?? prompt.cover_height ?? activeFrame?.height ?? null;
   const naturalRatio = w && h ? w / h : 1;
   const displayRatio = Math.max(0.4, Math.min(2.5, naturalRatio));
   const aspectStyle = { aspectRatio: String(displayRatio) };
@@ -152,7 +149,12 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
                 alt={i === 0 ? prompt.title : ""}
                 loading="lazy"
                 decoding="async"
-                onLoad={(e) => recordDim(frame.url, e)}
+                ref={(el) => {
+                  // Cached images can already be `complete` before React
+                  // attaches onLoad, so capture dims here too.
+                  if (el && el.complete) captureDims(el, frame.url);
+                }}
+                onLoad={(e) => captureDims(e.currentTarget, frame.url)}
                 className={cn(
                   "absolute inset-0 h-full w-full object-cover",
                   active === i ? "opacity-100" : "opacity-0"
