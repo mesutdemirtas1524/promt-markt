@@ -9,7 +9,6 @@ import { getServerT } from "@/lib/i18n/server";
 import { InfiniteFeed } from "@/components/infinite-feed";
 import { PriceTag } from "@/components/price-tag";
 import { ArrowRight, Sparkles, Trophy, Layers } from "lucide-react";
-import { DiscoverSearch } from "@/components/discover/discover-search";
 import {
   DiscoverFilters,
   type DiscoverSearchParams,
@@ -70,33 +69,6 @@ export default async function HomePage({
 
   return (
     <div className="w-full">
-      {/* Compact hero: just the search bar + a thin stats strip. The
-          ambient grid + gradient now lives on <body> so we don't repeat
-          it locally — the band just borders below for visual separation. */}
-      <section className="border-b border-border">
-        <div className="w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-10 xl:px-16">
-          <div className="mx-auto max-w-2xl">
-            <DiscoverSearch
-              initialValue={search}
-              preserve={sp as Record<string, string | undefined>}
-              placeholder="Search prompts, styles, creators…"
-            />
-          </div>
-
-          {showStats && (
-            <dl className="mx-auto mt-4 flex max-w-4xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs">
-              <InlineStat label="prompts" value={stats.activePrompts.toLocaleString()} />
-              <InlineStat label="creators" value={stats.activeCreators.toLocaleString()} />
-              <InlineStat label="sales · 30d" value={stats.recentSales.toLocaleString()} />
-              <InlineStat
-                label="volume · 30d"
-                value={<PriceTag sol={stats.recentVolumeSol} size="xs" />}
-              />
-            </dl>
-          )}
-        </div>
-      </section>
-
       {/* Main: sidebar + feed */}
       <section className="w-full px-4 py-6 sm:px-6 lg:px-10 xl:px-16">
         <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-8">
@@ -223,7 +195,46 @@ export default async function HomePage({
           </section>
         )}
 
-        <section className="mt-12 rounded-2xl border border-border bg-tint-1 p-6 sm:p-8">
+        {/* Marketplace stats hero — moved to the bottom so the feed leads.
+            Restored the fuller framing (badge + headline + subtitle) from the
+            earlier homepage so the stats have narrative around them. */}
+        <section className="relative mt-12 overflow-hidden rounded-2xl border border-border">
+          <div className="absolute inset-0 bg-grid opacity-50" />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse 70% 60% at 25% 0%, var(--ambient-a), transparent 60%), radial-gradient(ellipse 50% 50% at 95% 100%, var(--ambient-b), transparent 60%)",
+            }}
+          />
+          <div className="relative flex flex-col items-start gap-5 p-8 md:p-12">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-tint-1 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
+              <Sparkles className="h-3 w-3 text-violet-400" />
+              <span className="tracking-tight">{t("home.badge")}</span>
+            </div>
+            <h2 className="max-w-3xl text-3xl font-semibold leading-[1.05] tracking-tight md:text-4xl">
+              {t("home.title.1")}{" "}
+              <span className="text-gradient-violet">{t("home.title.2")}</span>
+            </h2>
+            <p className="max-w-xl text-sm text-muted-foreground md:text-base">
+              {t("home.subtitle")}
+            </p>
+
+            {showStats && (
+              <dl className="mt-2 grid w-full grid-cols-2 gap-x-8 gap-y-4 border-t border-border/60 pt-6 sm:grid-cols-4">
+                <Stat label="Active prompts" value={stats.activePrompts.toLocaleString()} />
+                <Stat label="Creators" value={stats.activeCreators.toLocaleString()} />
+                <Stat label="Sales · 30d" value={stats.recentSales.toLocaleString()} />
+                <Stat
+                  label="Volume · 30d"
+                  value={<PriceTag sol={stats.recentVolumeSol} size="base" />}
+                />
+              </dl>
+            )}
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-border bg-tint-1 p-6 sm:p-8">
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-base font-medium tracking-tight">{t("home.sellTitle")}</h3>
@@ -241,11 +252,13 @@ export default async function HomePage({
   );
 }
 
-function InlineStat({ label, value }: { label: string; value: React.ReactNode }) {
+function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="inline-flex items-baseline gap-1.5">
-      <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</dt>
-      <dd className="text-sm font-semibold tabular-nums">{value}</dd>
+    <div>
+      <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dd className="mt-1 text-xl font-semibold tabular-nums tracking-tight md:text-2xl">
+        {value}
+      </dd>
     </div>
   );
 }

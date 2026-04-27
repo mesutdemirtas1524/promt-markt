@@ -4,8 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "./ui/button";
-import { Search, Plus, LogOut, Heart } from "lucide-react";
+import { Search, Plus, LogOut, Heart, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useSolBalance } from "@/hooks/use-sol-balance";
 import { useSolPrice, solToUsdString } from "@/hooks/use-sol-price";
@@ -30,11 +31,17 @@ export function Navbar() {
   const { t } = useT();
 
   const balanceUsd = balance !== null ? solToUsdString(balance, usd) : "";
+  const [searchValue, setSearchValue] = useState("");
+
+  function submitSearch(next: string) {
+    const trimmed = next.trim();
+    router.push(trimmed ? `/?q=${encodeURIComponent(trimmed)}` : "/");
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full glass-strong">
       <div className="flex h-16 w-full items-center justify-between gap-4 px-4 sm:h-[72px] sm:px-6 lg:px-10 xl:px-16">
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6 lg:gap-8">
           <Link href="/" className="group flex items-center gap-3">
             <Image
               src="/pm-logo.svg"
@@ -48,7 +55,7 @@ export function Navbar() {
               Promt Markt
             </span>
           </Link>
-          <nav className="hidden items-center gap-1 text-sm md:flex">
+          <nav className="hidden items-center gap-1 text-sm lg:flex">
             <Link
               href="/new"
               className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-tint-2 hover:text-foreground"
@@ -64,15 +71,39 @@ export function Navbar() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => router.push("/")}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-tint-2 hover:text-foreground md:hidden"
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitSearch(searchValue);
+          }}
+          className="relative block min-w-0 flex-1 max-w-xl"
+          role="search"
+        >
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder={t("nav.searchPlaceholder")}
+            className="h-10 w-full rounded-full border border-border bg-tint-1 pl-10 pr-9 text-sm tracking-tight outline-none transition-all placeholder:text-muted-foreground/70 focus:border-violet-400/40 focus:bg-tint-2 focus:ring-2 focus:ring-violet-500/15"
             aria-label={t("nav.search")}
-          >
-            <Search className="h-4 w-4" />
-          </button>
+          />
+          {searchValue && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchValue("");
+                submitSearch("");
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground hover:bg-tint-3 hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </form>
 
+        <div className="flex items-center gap-1.5">
           <ThemeToggle />
           <LocaleSwitcher />
 

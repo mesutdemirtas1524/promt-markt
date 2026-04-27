@@ -14,6 +14,7 @@ export const dictionaries = {
     "nav.profile": "My profile",
     "nav.logout": "Log out",
     "nav.search": "Search",
+    "nav.searchPlaceholder": "Search prompts, styles, creators…",
 
     // Dashboard
     "dashboard.overview": "Overview",
@@ -129,6 +130,7 @@ export const dictionaries = {
     "nav.profile": "Profilim",
     "nav.logout": "Çıkış",
     "nav.search": "Ara",
+    "nav.searchPlaceholder": "Promt, stil, üretici ara…",
 
     "dashboard.overview": "Özet",
     "dashboard.myListings": "İlanlarım",
