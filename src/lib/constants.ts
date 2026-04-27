@@ -22,8 +22,8 @@ export const PROMPT_LIMITS = {
   // on-chain with "insufficient lamports for rent". Once a creator's
   // wallet has received any SOL it's fine. Operator's call.
   price: { min: 0, max: 1000, minPaid: 0.15 },
-  images: { min: 1, max: 6 },
-  imageSizeMB: 5,
+  images: { min: 1, max: 5 },
+  imageSizeMB: 2,
   dailyListings: 10,
 } as const;
 

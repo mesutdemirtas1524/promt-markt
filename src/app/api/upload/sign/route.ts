@@ -16,9 +16,13 @@ export async function POST(req: NextRequest) {
     files: { name: string; type: string; size: number }[];
   };
 
-  if (!Array.isArray(body.files) || body.files.length === 0 || body.files.length > PROMPT_LIMITS.images.max) {
+  // Gallery is capped at images.max; the upload-form may also append a
+  // dedicated cover file at the end of the same batch, so allow one extra
+  // slot above the gallery cap.
+  const maxFiles = PROMPT_LIMITS.images.max + 1;
+  if (!Array.isArray(body.files) || body.files.length === 0 || body.files.length > maxFiles) {
     return NextResponse.json(
-      { error: `Upload between ${PROMPT_LIMITS.images.min} and ${PROMPT_LIMITS.images.max} images` },
+      { error: `Upload between ${PROMPT_LIMITS.images.min} and ${PROMPT_LIMITS.images.max} images (plus optional cover)` },
       { status: 400 }
     );
   }
