@@ -105,19 +105,13 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
     return () => window.clearTimeout(t);
   }, [hovered]);
 
-  // Card aspect tracks the active frame so each image fills the card
-  // exactly — no crop, no letterbox, no zoom. Width is locked by the
-  // masonry column; only the height adapts as frames cycle. Prefer
-  // browser-measured dims over DB values (DB can be wrong/stale); if
-  // measurement isn't ready yet, fall back to the cover ratio rather
-  // than activeFrame's possibly-wrong DB dims so we don't briefly use
-  // a bogus aspect and crop the image.
-  const activeFrame = frames[active] ?? frames[0];
-  const measured = activeFrame ? measuredDims[activeFrame.url] : undefined;
-  const w = measured?.w ?? prompt.cover_width ?? activeFrame?.width ?? null;
-  const h = measured?.h ?? prompt.cover_height ?? activeFrame?.height ?? null;
-  const naturalRatio = w && h ? w / h : 1;
-  const displayRatio = Math.max(0.4, Math.min(2.5, naturalRatio));
+  // Card aspect is locked to the cover and never changes on hover.
+  // Trade-off: gallery frames with a different aspect will be cropped
+  // on one axis by object-cover, but the layout stays put.
+  const coverW = measuredDims[prompt.cover_image ?? ""]?.w ?? prompt.cover_width ?? null;
+  const coverH = measuredDims[prompt.cover_image ?? ""]?.h ?? prompt.cover_height ?? null;
+  const naturalRatio = coverW && coverH ? coverW / coverH : 1;
+  const displayRatio = Math.max(0.55, Math.min(1.78, naturalRatio));
   const aspectStyle = { aspectRatio: String(displayRatio) };
 
   return (
