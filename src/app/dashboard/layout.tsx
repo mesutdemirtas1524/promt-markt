@@ -18,6 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/purchases", label: t("dashboard.myLibrary") },
     { href: "/dashboard/favorites", label: t("nav.favorites") },
     { href: "/dashboard/earnings", label: t("dashboard.earnings") },
+    { href: "/dashboard/wallet", label: t("dashboard.wallet") },
     { href: "/dashboard/promos", label: "Promo codes" },
     { href: "/dashboard/settings", label: t("dashboard.settings") },
   ];
