@@ -11,6 +11,12 @@ import { formatUsd, cn } from "@/lib/utils";
 import { renderImageUrl } from "@/lib/image";
 import { SolLogo } from "./sol-logo";
 
+export type PromptCardFrame = {
+  url: string;
+  width: number | null;
+  height: number | null;
+};
+
 export type PromptCardData = {
   id: string;
   title: string;
@@ -23,9 +29,10 @@ export type PromptCardData = {
   cover_image: string | null;
   cover_width?: number | null;
   cover_height?: number | null;
-  /** All gallery image URLs in display order (cover first if it's part of the gallery).
-   *  Used to cycle through images on hover. Capped server-side to keep payload small. */
-  gallery_images?: string[];
+  /** Gallery frames in display order, each with its own natural dimensions.
+   *  We size the card to the active frame on hover so images fill without
+   *  cropping or letterboxing. Capped server-side to keep payload small. */
+  gallery_images?: PromptCardFrame[];
   creator_username: string;
   creator_avatar_url?: string | null;
   status?: "active" | "removed";
@@ -40,15 +47,28 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const isRemoved = prompt.status === "removed";
   const isFree = prompt.price_usd <= 0;
 
-  // Combine cover + gallery, dedupe URL repeats. The cover is what we
-  // render at rest; the rest become the hover-cycle frames.
-  const images = useMemo(() => {
-    const all = [prompt.cover_image, ...(prompt.gallery_images ?? [])].filter(
-      (u): u is string => Boolean(u)
-    );
-    return Array.from(new Set(all));
-  }, [prompt.cover_image, prompt.gallery_images]);
-  const hasMultiple = images.length > 1;
+  // Combine cover + gallery into ordered frames, dedupe by URL. Each
+  // frame carries its own dimensions so we can resize the card aspect
+  // ratio to match — no letterbox, no crop, no zoom on swap.
+  const frames = useMemo<PromptCardFrame[]>(() => {
+    const cover: PromptCardFrame | null = prompt.cover_image
+      ? {
+          url: prompt.cover_image,
+          width: prompt.cover_width ?? null,
+          height: prompt.cover_height ?? null,
+        }
+      : null;
+    const gallery = prompt.gallery_images ?? [];
+    const seen = new Set<string>();
+    const out: PromptCardFrame[] = [];
+    for (const f of [cover, ...gallery]) {
+      if (!f || seen.has(f.url)) continue;
+      seen.add(f.url);
+      out.push(f);
+    }
+    return out;
+  }, [prompt.cover_image, prompt.cover_width, prompt.cover_height, prompt.gallery_images]);
+  const hasMultiple = frames.length > 1;
 
   const [hovered, setHovered] = useState(false);
   const [active, setActive] = useState(0);
@@ -61,10 +81,10 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
     if (!hovered || !hasMultiple) return;
     if (!loadedExtras) setLoadedExtras(true);
     const id = window.setInterval(() => {
-      setActive((i) => (i + 1) % images.length);
+      setActive((i) => (i + 1) % frames.length);
     }, HOVER_CYCLE_MS);
     return () => window.clearInterval(id);
-  }, [hovered, hasMultiple, images.length, loadedExtras]);
+  }, [hovered, hasMultiple, frames.length, loadedExtras]);
 
   // Reset to the cover frame when the cursor leaves so the card looks
   // identical to first-paint state.
@@ -74,13 +94,13 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
     return () => window.clearTimeout(t);
   }, [hovered]);
 
-  // Clamp the displayed aspect ratio loosely — almost no cropping for the
-  // common formats (9:16 portraits, square, 4:3, 3:2, 16:9). Only the very
-  // extreme outliers (panoramic, columnar) get pulled back into range.
-  // No-dim fallback is square.
+  // Aspect ratio tracks the active frame so the image always fills the
+  // card with no crop and no letterbox. Loose clamp keeps extreme
+  // panoramic/columnar shots from blowing up the layout.
+  const activeFrame = frames[active] ?? frames[0];
   const naturalRatio =
-    prompt.cover_width && prompt.cover_height
-      ? prompt.cover_width / prompt.cover_height
+    activeFrame?.width && activeFrame?.height
+      ? activeFrame.width / activeFrame.height
       : 1;
   const displayRatio = Math.max(0.55, Math.min(1.78, naturalRatio));
   const aspectStyle = { aspectRatio: String(displayRatio) };
@@ -93,39 +113,39 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
     >
       <Link href={`/prompt/${prompt.id}`} className="block" aria-label={prompt.title}>
         <div className="relative w-full overflow-hidden bg-muted" style={aspectStyle}>
-          {images.length === 0 && (
+          {frames.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
               No image
             </div>
           )}
           {/* Cover frame — always loaded so the card paints fast. */}
-          {images[0] && (
+          {frames[0] && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={images[0]}
+              src={frames[0].url}
               alt={prompt.title}
               loading="lazy"
               decoding="async"
               className={cn(
-                "absolute inset-0 h-full w-full object-contain",
+                "absolute inset-0 h-full w-full object-cover",
                 active === 0 ? "opacity-100" : "opacity-0"
               )}
             />
           )}
           {/* Extra frames — mounted only after first hover, then kept around. */}
           {loadedExtras &&
-            images.slice(1).map((url, i) => {
+            frames.slice(1).map((frame, i) => {
               const idx = i + 1;
               return (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  key={url}
-                  src={renderImageUrl(url, { width: PREVIEW_WIDTH, quality: 75 }) ?? url}
+                  key={frame.url}
+                  src={renderImageUrl(frame.url, { width: PREVIEW_WIDTH, quality: 75 }) ?? frame.url}
                   alt=""
                   loading="lazy"
                   decoding="async"
                   className={cn(
-                    "absolute inset-0 h-full w-full object-contain",
+                    "absolute inset-0 h-full w-full object-cover",
                     active === idx ? "opacity-100" : "opacity-0"
                   )}
                 />
@@ -141,7 +161,7 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
                 hovered ? "opacity-100" : "opacity-0"
               )}
             >
-              {images.map((_, i) => (
+              {frames.map((_, i) => (
                 <span
                   key={i}
                   className={cn(
