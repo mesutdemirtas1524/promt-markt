@@ -173,37 +173,55 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
               favorite toggle, so there's a single control instead of a
               passive count tile plus a separate "favorite" button. */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-            <div className="flex-1 rounded-xl border border-border bg-tint-1 p-3 transition-all hover:bg-tint-2">
-              <Link href={`/u/${prompt.creator.username}`} className="flex items-center gap-3">
-                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
+            <div className="flex flex-1 flex-col rounded-xl border border-border bg-tint-1 p-4 transition-all hover:bg-tint-2">
+              <Link href={`/u/${prompt.creator.username}`} className="flex items-center gap-3.5">
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
                   {prompt.creator.avatar_url && (
                     <Image
                       src={prompt.creator.avatar_url}
                       alt={prompt.creator.display_name ?? prompt.creator.username}
                       fill
-                      sizes="40px"
+                      sizes="56px"
                       className="object-cover"
                     />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium tracking-tight">
+                  <div className="truncate text-base font-semibold tracking-tight">
                     {prompt.creator.display_name ?? `@${prompt.creator.username}`}
                   </div>
                   {prompt.creator.display_name && (
                     <div className="truncate text-xs text-muted-foreground">@{prompt.creator.username}</div>
                   )}
-                  <div className="text-[11px] text-muted-foreground">
-                    <TimeAgo iso={prompt.created_at} /> · {prompt.purchase_count} {t("detail.sales")}
-                  </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
-                    <span className="text-foreground">{creatorStats.activePrompts}</span> prompts ·{" "}
-                    <span className="text-foreground">{creatorStats.totalSales}</span> total sales
+                  <div className="mt-0.5 text-[11px] text-muted-foreground">
+                    <TimeAgo iso={prompt.created_at} />
                   </div>
                 </div>
               </Link>
+
+              {/* Creator-wide stats — fills the middle of the card so it
+                  doesn't feel hollow next to the stat column on the right. */}
+              <dl className="my-4 grid grid-cols-2 gap-3 border-y border-border/60 py-3.5">
+                <div>
+                  <dt className="text-[9.5px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Listings
+                  </dt>
+                  <dd className="mt-0.5 text-base font-semibold tabular-nums">
+                    {creatorStats.activePrompts}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[9.5px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Total sales
+                  </dt>
+                  <dd className="mt-0.5 text-base font-semibold tabular-nums">
+                    {creatorStats.totalSales}
+                  </dd>
+                </div>
+              </dl>
+
               {!isOwnPrompt && (
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-auto flex items-center gap-2">
                   <FollowButton
                     targetUserId={prompt.creator.id}
                     targetUsername={prompt.creator.username}
