@@ -76,6 +76,19 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   // initial feed payload light. Once flipped, stays true so the user can
   // re-hover without refetching.
   const [loadedExtras, setLoadedExtras] = useState(false);
+  // Some older gallery rows have null width/height in the DB. When the
+  // browser actually loads the image we can read its natural dimensions
+  // and store them here so the card aspect matches the picture exactly.
+  const [measuredDims, setMeasuredDims] = useState<Record<string, { w: number; h: number }>>({});
+
+  function recordDim(url: string, e: React.SyntheticEvent<HTMLImageElement>) {
+    const img = e.currentTarget;
+    if (!img.naturalWidth || !img.naturalHeight) return;
+    setMeasuredDims((prev) => {
+      if (prev[url]) return prev;
+      return { ...prev, [url]: { w: img.naturalWidth, h: img.naturalHeight } };
+    });
+  }
 
   useEffect(() => {
     if (!hovered || !hasMultiple) return;
@@ -95,13 +108,16 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   }, [hovered]);
 
   // Aspect ratio tracks the active frame so the image always fills the
-  // card with no crop and no letterbox. Loose clamp keeps extreme
-  // panoramic/columnar shots from blowing up the layout.
+  // card with no crop and no letterbox. Prefer measured natural dims
+  // (most reliable) → DB dims → cover dims → 1:1 fallback. Loose clamp
+  // keeps extreme panoramic/columnar shots from blowing up the layout.
   const activeFrame = frames[active] ?? frames[0];
-  const naturalRatio =
-    activeFrame?.width && activeFrame?.height
-      ? activeFrame.width / activeFrame.height
-      : 1;
+  const measured = activeFrame ? measuredDims[activeFrame.url] : undefined;
+  const w =
+    measured?.w ?? activeFrame?.width ?? prompt.cover_width ?? null;
+  const h =
+    measured?.h ?? activeFrame?.height ?? prompt.cover_height ?? null;
+  const naturalRatio = w && h ? w / h : 1;
   const displayRatio = Math.max(0.55, Math.min(1.78, naturalRatio));
   const aspectStyle = { aspectRatio: String(displayRatio) };
 
@@ -126,6 +142,7 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               alt={prompt.title}
               loading="lazy"
               decoding="async"
+              onLoad={(e) => recordDim(frames[0].url, e)}
               className={cn(
                 "absolute inset-0 h-full w-full object-cover",
                 active === 0 ? "opacity-100" : "opacity-0"
@@ -144,6 +161,7 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
                   alt=""
                   loading="lazy"
                   decoding="async"
+                  onLoad={(e) => recordDim(frame.url, e)}
                   className={cn(
                     "absolute inset-0 h-full w-full object-cover",
                     active === idx ? "opacity-100" : "opacity-0"
