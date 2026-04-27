@@ -119,44 +119,27 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               No image
             </div>
           )}
-          {/* Each frame renders twice: a blurred copy that fills the card
-              (covers any aspect mismatch), and the actual image on top
-              shown with object-contain so it's never cropped or scaled
-              up. The browser fetches the URL once and reuses it. */}
           {frames.map((frame, i) => {
-            // Skip rendering extras until first hover, but always paint
-            // the cover so the card is never blank.
+            // Skip extras until first hover, but always paint the cover
+            // so the card is never blank.
             if (i > 0 && !loadedExtras) return null;
             const src =
               i === 0
                 ? frame.url
                 : renderImageUrl(frame.url, { width: PREVIEW_WIDTH, quality: 75 }) ?? frame.url;
-            const visible = active === i;
             return (
-              <div
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 key={frame.url}
+                src={src}
+                alt={i === 0 ? prompt.title : ""}
+                loading="lazy"
+                decoding="async"
                 className={cn(
-                  "absolute inset-0",
-                  visible ? "opacity-100" : "opacity-0"
+                  "absolute inset-0 h-full w-full object-cover",
+                  active === i ? "opacity-100" : "opacity-0"
                 )}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  aria-hidden
-                  src={src}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl"
-                />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt={i === 0 ? prompt.title : ""}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 h-full w-full object-contain"
-                />
-              </div>
+              />
             );
           })}
 
