@@ -107,7 +107,7 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               loading="lazy"
               decoding="async"
               className={cn(
-                "absolute inset-0 h-full w-full object-cover",
+                "absolute inset-0 h-full w-full object-contain",
                 active === 0 ? "opacity-100" : "opacity-0"
               )}
             />
@@ -125,7 +125,7 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
                   loading="lazy"
                   decoding="async"
                   className={cn(
-                    "absolute inset-0 h-full w-full object-cover",
+                    "absolute inset-0 h-full w-full object-contain",
                     active === idx ? "opacity-100" : "opacity-0"
                   )}
                 />
