@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Badge } from "./ui/badge";
 import { Star, Heart, ShoppingBag } from "lucide-react";
 import { FavoriteButton } from "./favorite-button";
@@ -29,17 +30,15 @@ export type PromptCardData = {
   cover_image: string | null;
   cover_width?: number | null;
   cover_height?: number | null;
-  /** Gallery frames in display order, each with its own natural dimensions.
-   *  We size the card to the active frame on hover so images fill without
-   *  cropping or letterboxing. Capped server-side to keep payload small. */
+  /** Gallery image URLs (with dims) — shown together in the hover panel. */
   gallery_images?: PromptCardFrame[];
   creator_username: string;
   creator_avatar_url?: string | null;
   status?: "active" | "removed";
 };
 
-const HOVER_CYCLE_MS = 450;
-const PREVIEW_WIDTH = 700;
+const PANEL_THUMB_HEIGHT = 220;
+const PANEL_GAP = 12;
 
 export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const { isFavorited } = useFavorites();
@@ -47,10 +46,8 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const isRemoved = prompt.status === "removed";
   const isFree = prompt.price_usd <= 0;
 
-  // Combine cover + gallery into ordered frames, dedupe by URL. Each
-  // frame carries its own dimensions so we can resize the card aspect
-  // ratio to match — no letterbox, no crop, no zoom on swap.
-  const frames = useMemo<PromptCardFrame[]>(() => {
+  // Cover + gallery, deduped, in display order.
+  const allImages = useMemo<PromptCardFrame[]>(() => {
     const cover: PromptCardFrame | null = prompt.cover_image
       ? {
           url: prompt.cover_image,
@@ -68,198 +65,195 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
     }
     return out;
   }, [prompt.cover_image, prompt.cover_width, prompt.cover_height, prompt.gallery_images]);
-  const hasMultiple = frames.length > 1;
+  const hasMultiple = allImages.length > 1;
 
+  const cardRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
-  const [active, setActive] = useState(0);
-  // Don't request the extra frames until the user actually hovers — keeps
-  // initial feed payload light. Once flipped, stays true so the user can
-  // re-hover without refetching.
-  const [loadedExtras, setLoadedExtras] = useState(false);
-  // Stored DB dimensions can be missing or stale, so trust the browser's
-  // measured naturalWidth/naturalHeight as soon as the image decodes.
-  const [measuredDims, setMeasuredDims] = useState<Record<string, { w: number; h: number }>>({});
+  const [mounted, setMounted] = useState(false);
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number; width: number } | null>(
+    null
+  );
 
-  function captureDims(el: HTMLImageElement, url: string) {
-    if (!el.naturalWidth || !el.naturalHeight) return;
-    setMeasuredDims((prev) => {
-      if (prev[url]) return prev;
-      return { ...prev, [url]: { w: el.naturalWidth, h: el.naturalHeight } };
+  useEffect(() => setMounted(true), []);
+
+  // Compute panel anchor (below the card, centered) when hover starts. We
+  // use the viewport-relative rect because the panel is fixed-positioned.
+  useEffect(() => {
+    if (!hovered || !cardRef.current) {
+      setPanelPos(null);
+      return;
+    }
+    const rect = cardRef.current.getBoundingClientRect();
+    setPanelPos({
+      top: rect.bottom + PANEL_GAP,
+      left: rect.left + rect.width / 2,
+      width: rect.width,
     });
-  }
-
-  useEffect(() => {
-    if (!hovered || !hasMultiple) return;
-    if (!loadedExtras) setLoadedExtras(true);
-    const id = window.setInterval(() => {
-      setActive((i) => (i + 1) % frames.length);
-    }, HOVER_CYCLE_MS);
-    return () => window.clearInterval(id);
-  }, [hovered, hasMultiple, frames.length, loadedExtras]);
-
-  // Reset to the cover frame when the cursor leaves so the card looks
-  // identical to first-paint state.
-  useEffect(() => {
-    if (hovered) return;
-    const t = window.setTimeout(() => setActive(0), 200);
-    return () => window.clearTimeout(t);
   }, [hovered]);
 
-  // Card aspect is locked to the cover and never changes on hover.
-  // Trade-off: gallery frames with a different aspect will be cropped
-  // on one axis by object-cover, but the layout stays put.
-  const coverW = measuredDims[prompt.cover_image ?? ""]?.w ?? prompt.cover_width ?? null;
-  const coverH = measuredDims[prompt.cover_image ?? ""]?.h ?? prompt.cover_height ?? null;
-  const naturalRatio = coverW && coverH ? coverW / coverH : 1;
+  // Card aspect locked to cover. No more cycling — the cover is what
+  // sits in the masonry; the full gallery shows in the hover panel.
+  const naturalRatio =
+    prompt.cover_width && prompt.cover_height
+      ? prompt.cover_width / prompt.cover_height
+      : 1;
   const displayRatio = Math.max(0.55, Math.min(1.78, naturalRatio));
   const aspectStyle = { aspectRatio: String(displayRatio) };
 
+  const showOverlay = hovered && hasMultiple;
+
   return (
-    <div
-      className="ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <Link href={`/prompt/${prompt.id}`} className="block" aria-label={prompt.title}>
-        <div className="relative w-full overflow-hidden bg-muted" style={aspectStyle}>
-          {frames.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-              No image
-            </div>
-          )}
-          {frames.map((frame, i) => {
-            // Skip extras until first hover, but always paint the cover
-            // so the card is never blank.
-            if (i > 0 && !loadedExtras) return null;
-            const src =
-              i === 0
-                ? frame.url
-                : renderImageUrl(frame.url, { width: PREVIEW_WIDTH, quality: 75 }) ?? frame.url;
-            return (
+    <>
+      <div
+        ref={cardRef}
+        className={cn(
+          "ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid",
+          showOverlay && "z-[60]"
+        )}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <Link href={`/prompt/${prompt.id}`} className="block" aria-label={prompt.title}>
+          <div className="relative w-full overflow-hidden bg-muted" style={aspectStyle}>
+            {prompt.cover_image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                key={frame.url}
-                src={src}
-                alt={i === 0 ? prompt.title : ""}
+                src={prompt.cover_image}
+                alt={prompt.title}
                 loading="lazy"
                 decoding="async"
-                ref={(el) => {
-                  // Cached images can already be `complete` before React
-                  // attaches onLoad, so capture dims here too.
-                  if (el && el.complete) captureDims(el, frame.url);
-                }}
-                onLoad={(e) => captureDims(e.currentTarget, frame.url)}
-                className={cn(
-                  "absolute inset-0 h-full w-full object-cover",
-                  active === i ? "opacity-100" : "opacity-0"
-                )}
+                className="absolute inset-0 h-full w-full object-cover"
               />
-            );
-          })}
-
-          {/* Frame dots — bottom-center pips that highlight the active
-              image while the user is hovering on a multi-image card. */}
-          {hasMultiple && (
-            <div
-              className={cn(
-                "pointer-events-none absolute bottom-2 left-1/2 z-[6] flex -translate-x-1/2 gap-1 transition-opacity duration-200",
-                hovered ? "opacity-100" : "opacity-0"
-              )}
-            >
-              {frames.map((_, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "h-1 rounded-full transition-all duration-200",
-                    i === active ? "w-4 bg-white" : "w-1 bg-white/55"
-                  )}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Top-right: price pill — the only thing visible by default. */}
-          <div className="absolute right-2 top-2 z-[5] flex flex-col items-end gap-1.5">
-            {isFree ? (
-              <span className="rounded-full bg-emerald-500/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur">
-                Free
-              </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/65 px-2.5 py-1 text-white shadow-sm backdrop-blur-md">
-                <SolLogo className="h-3 w-3" />
-                <span className="text-[12px] font-bold tabular-nums leading-none">
-                  {formatUsd(prompt.price_usd)}
-                </span>
-              </span>
+              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+                No image
+              </div>
             )}
-            {isRemoved && <Badge variant="destructive">Removed</Badge>}
-          </div>
 
-          {/* Hover overlay — title, creator, stats. Hidden by default;
-              fades in over a dark gradient when the user hovers. */}
-          <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-3 pt-10 text-white">
-              <h3 className="mb-2 line-clamp-2 text-[13px] font-semibold leading-snug drop-shadow">
-                {prompt.title}
-              </h3>
-              <div className="flex items-center justify-between gap-2 text-[11px]">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  {prompt.creator_avatar_url ? (
-                    <span className="relative h-4 w-4 shrink-0 overflow-hidden rounded-full ring-1 ring-white/30">
-                      <Image
-                        src={prompt.creator_avatar_url}
-                        alt=""
-                        fill
-                        sizes="16px"
-                        className="object-cover"
-                      />
-                    </span>
-                  ) : (
-                    <span className="h-4 w-4 shrink-0 rounded-full bg-white/20" />
-                  )}
-                  <span className="truncate opacity-90">@{prompt.creator_username}</span>
-                </div>
-                <div className="flex shrink-0 items-center gap-2 opacity-90">
-                  {prompt.purchase_count > 0 && (
-                    <span className="inline-flex items-center gap-0.5 tabular-nums">
-                      <ShoppingBag className="h-3 w-3" />
-                      {prompt.purchase_count}
-                    </span>
-                  )}
-                  {prompt.favorite_count > 0 && (
-                    <span className="inline-flex items-center gap-0.5 tabular-nums">
-                      <Heart className="h-3 w-3 fill-pink-400 text-pink-400" />
-                      {prompt.favorite_count}
-                    </span>
-                  )}
-                  {prompt.rating_count > 0 && prompt.avg_rating !== null && (
-                    <span className="inline-flex items-center gap-0.5 tabular-nums">
-                      <Star className="h-3 w-3 fill-amber-300 text-amber-300" />
-                      {Math.round(prompt.avg_rating)}
-                    </span>
-                  )}
+            {/* Top-right: price pill */}
+            <div className="absolute right-2 top-2 z-[5] flex flex-col items-end gap-1.5">
+              {isFree ? (
+                <span className="rounded-full bg-emerald-500/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur">
+                  Free
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/65 px-2.5 py-1 text-white shadow-sm backdrop-blur-md">
+                  <SolLogo className="h-3 w-3" />
+                  <span className="text-[12px] font-bold tabular-nums leading-none">
+                    {formatUsd(prompt.price_usd)}
+                  </span>
+                </span>
+              )}
+              {isRemoved && <Badge variant="destructive">Removed</Badge>}
+            </div>
+
+            {/* Hover overlay — title, creator, stats. */}
+            <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-3 pt-10 text-white">
+                <h3 className="mb-2 line-clamp-2 text-[13px] font-semibold leading-snug drop-shadow">
+                  {prompt.title}
+                </h3>
+                <div className="flex items-center justify-between gap-2 text-[11px]">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    {prompt.creator_avatar_url ? (
+                      <span className="relative h-4 w-4 shrink-0 overflow-hidden rounded-full ring-1 ring-white/30">
+                        <Image
+                          src={prompt.creator_avatar_url}
+                          alt=""
+                          fill
+                          sizes="16px"
+                          className="object-cover"
+                        />
+                      </span>
+                    ) : (
+                      <span className="h-4 w-4 shrink-0 rounded-full bg-white/20" />
+                    )}
+                    <span className="truncate opacity-90">@{prompt.creator_username}</span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 opacity-90">
+                    {prompt.purchase_count > 0 && (
+                      <span className="inline-flex items-center gap-0.5 tabular-nums">
+                        <ShoppingBag className="h-3 w-3" />
+                        {prompt.purchase_count}
+                      </span>
+                    )}
+                    {prompt.favorite_count > 0 && (
+                      <span className="inline-flex items-center gap-0.5 tabular-nums">
+                        <Heart className="h-3 w-3 fill-pink-400 text-pink-400" />
+                        {prompt.favorite_count}
+                      </span>
+                    )}
+                    {prompt.rating_count > 0 && prompt.avg_rating !== null && (
+                      <span className="inline-flex items-center gap-0.5 tabular-nums">
+                        <Star className="h-3 w-3 fill-amber-300 text-amber-300" />
+                        {Math.round(prompt.avg_rating)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </Link>
+        </Link>
 
-      {/* Hover-revealed favorite toggle */}
-      <div className="absolute left-2 top-2 z-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-within:opacity-100">
-        <FavoriteButton promptId={prompt.id} size="sm" />
+        {/* Hover-revealed favorite toggle */}
+        <div className="absolute left-2 top-2 z-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-within:opacity-100">
+          <FavoriteButton promptId={prompt.id} size="sm" />
+        </div>
+
+        {/* "Already favorited" indicator when not hovering */}
+        {favorited && (
+          <div className="pointer-events-none absolute left-2 top-2 z-[5] transition-opacity duration-200 group-hover:opacity-0">
+            <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-pink-400 backdrop-blur">
+              <Heart className="h-3.5 w-3.5 fill-current" />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Subtle "already favorited" indicator — only when not hovering, so
-          the user still gets feedback that they hearted this one. */}
-      {favorited && (
-        <div className="pointer-events-none absolute left-2 top-2 z-[5] transition-opacity duration-200 group-hover:opacity-0">
-          <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-pink-400 backdrop-blur">
-            <Heart className="h-3.5 w-3.5 fill-current" />
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Backdrop blur over the rest of the page (portal so it isn't
+          clipped by the masonry's column flow). */}
+      {showOverlay && mounted &&
+        createPortal(
+          <div className="pointer-events-none fixed inset-0 z-[55] bg-black/45 backdrop-blur-md" />,
+          document.body
+        )}
+
+      {/* Gallery panel positioned just below the hovered card. */}
+      {showOverlay && mounted && panelPos &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[60]"
+            style={{
+              top: panelPos.top,
+              left: panelPos.left,
+              transform: "translateX(-50%)",
+              maxWidth: "min(960px, calc(100vw - 32px))",
+            }}
+          >
+            <div className="pointer-events-auto rounded-xl border border-border bg-card/95 p-2 shadow-2xl backdrop-blur">
+              <div className="flex max-w-full gap-2 overflow-x-auto">
+                {allImages.map((img) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={img.url}
+                    src={
+                      renderImageUrl(img.url, { height: PANEL_THUMB_HEIGHT * 2, quality: 80 }) ??
+                      img.url
+                    }
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="block shrink-0 rounded-md"
+                    style={{ height: PANEL_THUMB_HEIGHT, width: "auto" }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
 
