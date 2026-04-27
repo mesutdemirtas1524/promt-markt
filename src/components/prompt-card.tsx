@@ -68,28 +68,56 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const hasMultiple = allImages.length > 1;
 
   const cardRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<number | null>(null);
   const [hovered, setHovered] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [panelPos, setPanelPos] = useState<{ top: number; left: number; width: number } | null>(
-    null
-  );
+  const [panelPos, setPanelPos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    placement: "below" | "above";
+  } | null>(null);
 
   useEffect(() => setMounted(true), []);
 
-  // Compute panel anchor (below the card, centered) when hover starts. We
-  // use the viewport-relative rect because the panel is fixed-positioned.
+  // Compute panel anchor: below the card by default; flip above if the
+  // card is close to the viewport bottom so the panel never renders
+  // off-screen.
   useEffect(() => {
     if (!hovered || !cardRef.current) {
       setPanelPos(null);
       return;
     }
     const rect = cardRef.current.getBoundingClientRect();
+    const PANEL_HEIGHT = PANEL_THUMB_HEIGHT + 24; // thumb + panel padding
+    const viewportH = window.innerHeight;
+    const spaceBelow = viewportH - rect.bottom;
+    const placement: "below" | "above" =
+      spaceBelow >= PANEL_HEIGHT + PANEL_GAP || rect.top < PANEL_HEIGHT + PANEL_GAP
+        ? "below"
+        : "above";
     setPanelPos({
-      top: rect.bottom + PANEL_GAP,
+      top: placement === "below" ? rect.bottom + PANEL_GAP : rect.top - PANEL_GAP,
       left: rect.left + rect.width / 2,
       width: rect.width,
+      placement,
     });
   }, [hovered]);
+
+  function openOverlay() {
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setHovered(true);
+  }
+
+  function scheduleClose() {
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    // Small grace window so the cursor can travel from the card into the
+    // panel without flicker-closing.
+    closeTimerRef.current = window.setTimeout(() => setHovered(false), 120);
+  }
 
   // Card aspect locked to cover. No more cycling — the cover is what
   // sits in the masonry; the full gallery shows in the hover panel.
@@ -100,7 +128,13 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   const displayRatio = Math.max(0.55, Math.min(1.78, naturalRatio));
   const aspectStyle = { aspectRatio: String(displayRatio) };
 
-  const showOverlay = hovered && hasMultiple;
+  // Open the overlay on every hover, even for single-image cards — the
+  // panel just shows the cover in that case. Avoids the "nothing
+  // happens" feel.
+  const showOverlay = hovered && allImages.length > 0;
+  // Suppress the unused-var warning for hasMultiple while we keep the
+  // computation in place for future tweaks.
+  void hasMultiple;
 
   return (
     <>
@@ -110,8 +144,8 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
           "ring-hover group relative inline-block w-full overflow-hidden rounded-xl border border-border bg-card break-inside-avoid",
           showOverlay && "z-[60]"
         )}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={openOverlay}
+        onMouseLeave={scheduleClose}
       >
         <Link href={`/prompt/${prompt.id}`} className="block" aria-label={prompt.title}>
           <div className="relative w-full overflow-hidden bg-muted" style={aspectStyle}>
@@ -219,17 +253,22 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
           document.body
         )}
 
-      {/* Gallery panel positioned just below the hovered card. */}
+      {/* Gallery panel positioned just below (or above) the hovered card. */}
       {showOverlay && mounted && panelPos &&
         createPortal(
           <div
-            className="pointer-events-none fixed z-[60]"
+            className="fixed z-[60]"
             style={{
               top: panelPos.top,
               left: panelPos.left,
-              transform: "translateX(-50%)",
+              transform:
+                panelPos.placement === "below"
+                  ? "translateX(-50%)"
+                  : "translate(-50%, -100%)",
               maxWidth: "min(960px, calc(100vw - 32px))",
             }}
+            onMouseEnter={openOverlay}
+            onMouseLeave={scheduleClose}
           >
             <div className="pointer-events-auto rounded-xl border border-border bg-card/95 p-2 shadow-2xl backdrop-blur">
               <div className="flex max-w-full gap-2 overflow-x-auto">
