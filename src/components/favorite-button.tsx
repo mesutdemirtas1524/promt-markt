@@ -105,7 +105,7 @@ export function FavoriteButton({
         aria-label={favorited ? t("fav.remove") : t("fav.add")}
         disabled={busy}
         className={cn(
-          "group rounded-xl border bg-tint-1 px-3 py-2.5 text-left transition-all hover:bg-tint-2 active:scale-[0.98]",
+          "group flex flex-col justify-center rounded-xl border bg-tint-1 px-3 py-2.5 text-left transition-all hover:bg-tint-2 active:scale-[0.98]",
           favorited
             ? "border-pink-400/30 bg-pink-500/10 hover:bg-pink-500/15"
             : "border-border"

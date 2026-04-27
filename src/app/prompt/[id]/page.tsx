@@ -240,7 +240,10 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:flex sm:w-32 sm:flex-col">
+            {/* On sm+ each tile uses flex-1 so the column stretches to
+                match the creator card's height — no empty gap below the
+                last tile. */}
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:w-32 sm:flex-col sm:[&>*]:flex-1">
               <Stat
                 icon={<Star className="h-3.5 w-3.5 text-amber-300" />}
                 label={t("detail.stat.rating")}
@@ -354,7 +357,7 @@ function Stat({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-tint-1 px-3 py-2.5">
+    <div className="flex flex-col justify-center rounded-xl border border-border bg-tint-1 px-3 py-2.5">
       <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
         {icon}
         {label}
