@@ -76,6 +76,19 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   // initial feed payload light. Once flipped, stays true so the user can
   // re-hover without refetching.
   const [loadedExtras, setLoadedExtras] = useState(false);
+  // Some older gallery rows have null width/height in the DB. Read the
+  // browser's naturalWidth/naturalHeight on load so we can pick the right
+  // fit strategy (cover vs contain) per frame.
+  const [measuredDims, setMeasuredDims] = useState<Record<string, { w: number; h: number }>>({});
+
+  function recordDim(url: string, e: React.SyntheticEvent<HTMLImageElement>) {
+    const img = e.currentTarget;
+    if (!img.naturalWidth || !img.naturalHeight) return;
+    setMeasuredDims((prev) => {
+      if (prev[url]) return prev;
+      return { ...prev, [url]: { w: img.naturalWidth, h: img.naturalHeight } };
+    });
+  }
 
   useEffect(() => {
     if (!hovered || !hasMultiple) return;
@@ -96,15 +109,28 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
 
   // Card aspect is locked to the cover so it never resizes on hover.
   // Loose clamp keeps extreme panoramic/columnar shots from blowing up
-  // the layout. Per-frame images use object-contain inside this card so
-  // no image gets cropped or zoomed; a blurred copy fills the leftover
-  // space behind the image so the card never feels empty.
+  // the layout.
   const naturalRatio =
     prompt.cover_width && prompt.cover_height
       ? prompt.cover_width / prompt.cover_height
       : 1;
   const displayRatio = Math.max(0.55, Math.min(1.78, naturalRatio));
   const aspectStyle = { aspectRatio: String(displayRatio) };
+
+  // Pick fit per frame: object-cover when the frame's aspect is close to
+  // the card's (small crop, fills the card), object-contain when it's far
+  // off (letterbox, but no extreme zoom/crop). Threshold = 1.35× — i.e.
+  // either side can be up to 35% taller/wider before we switch.
+  const FIT_THRESHOLD = 1.35;
+  function fitFor(frame: PromptCardFrame): "cover" | "contain" {
+    const measured = measuredDims[frame.url];
+    const w = measured?.w ?? frame.width ?? null;
+    const h = measured?.h ?? frame.height ?? null;
+    if (!w || !h) return "cover";
+    const r = w / h;
+    const mismatch = Math.max(displayRatio / r, r / displayRatio);
+    return mismatch > FIT_THRESHOLD ? "contain" : "cover";
+  }
 
   return (
     <div
@@ -127,6 +153,7 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               i === 0
                 ? frame.url
                 : renderImageUrl(frame.url, { width: PREVIEW_WIDTH, quality: 75 }) ?? frame.url;
+            const fit = fitFor(frame);
             return (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -135,8 +162,10 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
                 alt={i === 0 ? prompt.title : ""}
                 loading="lazy"
                 decoding="async"
+                onLoad={(e) => recordDim(frame.url, e)}
                 className={cn(
-                  "absolute inset-0 h-full w-full object-cover",
+                  "absolute inset-0 h-full w-full",
+                  fit === "cover" ? "object-cover" : "object-contain",
                   active === i ? "opacity-100" : "opacity-0"
                 )}
               />
