@@ -169,83 +169,85 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
             <p className="mt-3 text-sm text-muted-foreground">{prompt.description}</p>
           </div>
 
-          {/* Creator */}
-          <div className="rounded-xl border border-border bg-tint-1 p-3 transition-all hover:bg-tint-2">
-            <Link href={`/u/${prompt.creator.username}`} className="flex items-center gap-3">
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
-                {prompt.creator.avatar_url && (
-                  <Image
-                    src={prompt.creator.avatar_url}
-                    alt={prompt.creator.display_name ?? prompt.creator.username}
-                    fill
-                    sizes="40px"
-                    className="object-cover"
-                  />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium tracking-tight">
-                  {prompt.creator.display_name ?? `@${prompt.creator.username}`}
+          {/* Creator card + stats side-by-side. The favorites stat IS the
+              favorite toggle, so there's a single control instead of a
+              passive count tile plus a separate "favorite" button. */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+            <div className="flex-1 rounded-xl border border-border bg-tint-1 p-3 transition-all hover:bg-tint-2">
+              <Link href={`/u/${prompt.creator.username}`} className="flex items-center gap-3">
+                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
+                  {prompt.creator.avatar_url && (
+                    <Image
+                      src={prompt.creator.avatar_url}
+                      alt={prompt.creator.display_name ?? prompt.creator.username}
+                      fill
+                      sizes="40px"
+                      className="object-cover"
+                    />
+                  )}
                 </div>
-                {prompt.creator.display_name && (
-                  <div className="truncate text-xs text-muted-foreground">@{prompt.creator.username}</div>
-                )}
-                <div className="text-[11px] text-muted-foreground">
-                  <TimeAgo iso={prompt.created_at} /> · {prompt.purchase_count} {t("detail.sales")}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium tracking-tight">
+                    {prompt.creator.display_name ?? `@${prompt.creator.username}`}
+                  </div>
+                  {prompt.creator.display_name && (
+                    <div className="truncate text-xs text-muted-foreground">@{prompt.creator.username}</div>
+                  )}
+                  <div className="text-[11px] text-muted-foreground">
+                    <TimeAgo iso={prompt.created_at} /> · {prompt.purchase_count} {t("detail.sales")}
+                  </div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    <span className="text-foreground">{creatorStats.activePrompts}</span> prompts ·{" "}
+                    <span className="text-foreground">{creatorStats.totalSales}</span> total sales
+                  </div>
                 </div>
-                <div className="mt-1 text-[11px] text-muted-foreground">
-                  <span className="text-foreground">{creatorStats.activePrompts}</span> prompts ·{" "}
-                  <span className="text-foreground">{creatorStats.totalSales}</span> total sales
-                </div>
-              </div>
-            </Link>
-            {!isOwnPrompt && (
-              <div className="mt-3 flex items-center gap-2">
-                <FollowButton
-                  targetUserId={prompt.creator.id}
-                  targetUsername={prompt.creator.username}
-                  hideForSelfId={viewer?.id ?? null}
-                  size="sm"
-                  className="flex-1 justify-center"
-                />
-                {prompt.creator.wallet_address && (
-                  <TipButton
-                    creatorWallet={prompt.creator.wallet_address}
-                    creatorUsername={prompt.creator.username}
+              </Link>
+              {!isOwnPrompt && (
+                <div className="mt-3 flex items-center gap-2">
+                  <FollowButton
+                    targetUserId={prompt.creator.id}
+                    targetUsername={prompt.creator.username}
+                    hideForSelfId={viewer?.id ?? null}
                     size="sm"
+                    className="flex-1 justify-center"
                   />
-                )}
-              </div>
-            )}
-          </div>
+                  {prompt.creator.wallet_address && (
+                    <TipButton
+                      creatorWallet={prompt.creator.wallet_address}
+                      creatorUsername={prompt.creator.username}
+                      size="sm"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
 
-          {/* Stats row */}
-          <div className="grid grid-cols-3 gap-2">
-            <Stat
-              icon={<Star className="h-3.5 w-3.5 text-amber-300" />}
-              label={t("detail.stat.rating")}
-              value={formatRating(prompt.avg_rating, prompt.rating_count)}
-            />
-            <Stat
-              icon={<Heart className="h-3.5 w-3.5 text-pink-400" />}
-              label={t("detail.stat.favorites")}
-              value={String(prompt.favorite_count ?? 0)}
-            />
-            <Stat
-              icon={<ShoppingBag className="h-3.5 w-3.5 text-violet-300" />}
-              label={t("detail.stat.sales")}
-              value={String(prompt.purchase_count ?? 0)}
-            />
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:w-32 sm:flex-col">
+              <Stat
+                icon={<Star className="h-3.5 w-3.5 text-amber-300" />}
+                label={t("detail.stat.rating")}
+                value={formatRating(prompt.avg_rating, prompt.rating_count)}
+              />
+              {isOwnPrompt ? (
+                <Stat
+                  icon={<Heart className="h-3.5 w-3.5 text-pink-400" />}
+                  label={t("detail.stat.favorites")}
+                  value={String(prompt.favorite_count ?? 0)}
+                />
+              ) : (
+                <FavoriteButton
+                  promptId={prompt.id}
+                  variant="stat"
+                  initialCount={prompt.favorite_count ?? 0}
+                />
+              )}
+              <Stat
+                icon={<ShoppingBag className="h-3.5 w-3.5 text-violet-300" />}
+                label={t("detail.stat.sales")}
+                value={String(prompt.purchase_count ?? 0)}
+              />
+            </div>
           </div>
-
-          {!isOwnPrompt && (
-            <FavoriteButton
-              promptId={prompt.id}
-              size="md"
-              showLabel
-              initialCount={prompt.favorite_count ?? 0}
-            />
-          )}
 
           {isOwnPrompt && !isRemoved && (
             <div className="flex flex-wrap gap-2">

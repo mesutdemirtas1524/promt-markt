@@ -11,6 +11,13 @@ import { useFavorites } from "@/hooks/use-favorites";
 type Props = {
   promptId: string;
   size?: "sm" | "md";
+  /**
+   * Visual variant. `icon` = round heart over images; `label` = full-width
+   * pill button; `stat` = a stat-tile shaped button so the favorite count
+   * and the favorite toggle can share a single control.
+   */
+  variant?: "icon" | "label" | "stat";
+  /** @deprecated use variant="label" */
   showLabel?: boolean;
   initialCount?: number;
   onCountChange?: (next: number) => void;
@@ -19,10 +26,13 @@ type Props = {
 export function FavoriteButton({
   promptId,
   size = "md",
+  variant,
   showLabel = false,
   initialCount,
   onCountChange,
 }: Props) {
+  const resolvedVariant: "icon" | "label" | "stat" =
+    variant ?? (showLabel ? "label" : "icon");
   const { authenticated, login, getAccessToken } = usePrivy();
   const { t } = useT();
   const { isFavorited, markFavorited, markUnfavorited } = useFavorites();
@@ -68,7 +78,7 @@ export function FavoriteButton({
     }
   }
 
-  if (showLabel) {
+  if (resolvedVariant === "label") {
     return (
       <button
         type="button"
@@ -83,6 +93,46 @@ export function FavoriteButton({
         <Heart className={cn("h-4 w-4 transition-transform group-hover:scale-110", favorited && "fill-current")} />
         {favorited ? t("fav.favorited") : t("fav.favorite")}
         <span className="text-xs tabular-nums opacity-60">· {count}</span>
+      </button>
+    );
+  }
+
+  if (resolvedVariant === "stat") {
+    return (
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={favorited ? t("fav.remove") : t("fav.add")}
+        disabled={busy}
+        className={cn(
+          "group rounded-xl border bg-tint-1 px-3 py-2.5 text-left transition-all hover:bg-tint-2 active:scale-[0.98]",
+          favorited
+            ? "border-pink-400/30 bg-pink-500/10 hover:bg-pink-500/15"
+            : "border-border"
+        )}
+      >
+        <div
+          className={cn(
+            "mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider",
+            favorited ? "text-pink-300" : "text-muted-foreground"
+          )}
+        >
+          <Heart
+            className={cn(
+              "h-3.5 w-3.5 transition-transform group-hover:scale-110",
+              favorited ? "fill-current text-pink-400" : "text-pink-400"
+            )}
+          />
+          {t("detail.stat.favorites")}
+        </div>
+        <div
+          className={cn(
+            "truncate text-sm font-semibold tabular-nums",
+            favorited && "text-pink-200"
+          )}
+        >
+          {count}
+        </div>
       </button>
     );
   }

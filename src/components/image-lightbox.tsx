@@ -108,9 +108,10 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
   return (
     <>
       <div className="space-y-3">
-        {/* Main slider */}
+        {/* Main slider — no surrounding box; image renders at its natural
+            aspect, click to open fullscreen. */}
         <div
-          className="group relative overflow-hidden rounded-2xl border border-border bg-black/40"
+          className="group relative"
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
@@ -120,7 +121,7 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
             className="block w-full"
             aria-label={t("card.openFullscreen")}
           >
-            <div className="flex max-h-[80vh] min-h-[420px] items-center justify-center">
+            <div className="flex max-h-[80vh] items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={renderImageUrl(current.image_url, { width: 1400, quality: 85 }) ?? current.image_url}
@@ -153,7 +154,7 @@ export function PromptGallery({ images, alt }: { images: Img[]; alt: string }) {
 
         {/* Thumbnail strip */}
         {images.length > 1 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {images.map((img, i) => (
               <button
                 key={img.id}
