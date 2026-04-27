@@ -76,19 +76,6 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   // initial feed payload light. Once flipped, stays true so the user can
   // re-hover without refetching.
   const [loadedExtras, setLoadedExtras] = useState(false);
-  // Some older gallery rows have null width/height in the DB. When the
-  // browser actually loads the image we can read its natural dimensions
-  // and store them here so the card aspect matches the picture exactly.
-  const [measuredDims, setMeasuredDims] = useState<Record<string, { w: number; h: number }>>({});
-
-  function recordDim(url: string, e: React.SyntheticEvent<HTMLImageElement>) {
-    const img = e.currentTarget;
-    if (!img.naturalWidth || !img.naturalHeight) return;
-    setMeasuredDims((prev) => {
-      if (prev[url]) return prev;
-      return { ...prev, [url]: { w: img.naturalWidth, h: img.naturalHeight } };
-    });
-  }
 
   useEffect(() => {
     if (!hovered || !hasMultiple) return;
@@ -107,17 +94,15 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
     return () => window.clearTimeout(t);
   }, [hovered]);
 
-  // Aspect ratio tracks the active frame so the image always fills the
-  // card with no crop and no letterbox. Prefer measured natural dims
-  // (most reliable) → DB dims → cover dims → 1:1 fallback. Loose clamp
-  // keeps extreme panoramic/columnar shots from blowing up the layout.
-  const activeFrame = frames[active] ?? frames[0];
-  const measured = activeFrame ? measuredDims[activeFrame.url] : undefined;
-  const w =
-    measured?.w ?? activeFrame?.width ?? prompt.cover_width ?? null;
-  const h =
-    measured?.h ?? activeFrame?.height ?? prompt.cover_height ?? null;
-  const naturalRatio = w && h ? w / h : 1;
+  // Card aspect is locked to the cover so it never resizes on hover.
+  // Loose clamp keeps extreme panoramic/columnar shots from blowing up
+  // the layout. Per-frame images use object-contain inside this card so
+  // no image gets cropped or zoomed; a blurred copy fills the leftover
+  // space behind the image so the card never feels empty.
+  const naturalRatio =
+    prompt.cover_width && prompt.cover_height
+      ? prompt.cover_width / prompt.cover_height
+      : 1;
   const displayRatio = Math.max(0.55, Math.min(1.78, naturalRatio));
   const aspectStyle = { aspectRatio: String(displayRatio) };
 
@@ -134,41 +119,46 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
               No image
             </div>
           )}
-          {/* Cover frame — always loaded so the card paints fast. */}
-          {frames[0] && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={frames[0].url}
-              alt={prompt.title}
-              loading="lazy"
-              decoding="async"
-              onLoad={(e) => recordDim(frames[0].url, e)}
-              className={cn(
-                "absolute inset-0 h-full w-full object-cover",
-                active === 0 ? "opacity-100" : "opacity-0"
-              )}
-            />
-          )}
-          {/* Extra frames — mounted only after first hover, then kept around. */}
-          {loadedExtras &&
-            frames.slice(1).map((frame, i) => {
-              const idx = i + 1;
-              return (
-                // eslint-disable-next-line @next/next/no-img-element
+          {/* Each frame renders twice: a blurred copy that fills the card
+              (covers any aspect mismatch), and the actual image on top
+              shown with object-contain so it's never cropped or scaled
+              up. The browser fetches the URL once and reuses it. */}
+          {frames.map((frame, i) => {
+            // Skip rendering extras until first hover, but always paint
+            // the cover so the card is never blank.
+            if (i > 0 && !loadedExtras) return null;
+            const src =
+              i === 0
+                ? frame.url
+                : renderImageUrl(frame.url, { width: PREVIEW_WIDTH, quality: 75 }) ?? frame.url;
+            const visible = active === i;
+            return (
+              <div
+                key={frame.url}
+                className={cn(
+                  "absolute inset-0",
+                  visible ? "opacity-100" : "opacity-0"
+                )}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  key={frame.url}
-                  src={renderImageUrl(frame.url, { width: PREVIEW_WIDTH, quality: 75 }) ?? frame.url}
-                  alt=""
+                  aria-hidden
+                  src={src}
                   loading="lazy"
                   decoding="async"
-                  onLoad={(e) => recordDim(frame.url, e)}
-                  className={cn(
-                    "absolute inset-0 h-full w-full object-cover",
-                    active === idx ? "opacity-100" : "opacity-0"
-                  )}
+                  className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl"
                 />
-              );
-            })}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt={i === 0 ? prompt.title : ""}
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full object-contain"
+                />
+              </div>
+            );
+          })}
 
           {/* Frame dots — bottom-center pips that highlight the active
               image while the user is hovering on a multi-image card. */}
