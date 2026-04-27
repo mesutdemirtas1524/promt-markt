@@ -4,6 +4,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { Toaster } from "sonner";
 import { CurrentUserProvider } from "@/hooks/use-current-user";
+import { WalletAccountWatcher } from "@/hooks/use-wallet-account-watcher";
 import { SolPriceProvider } from "@/hooks/use-sol-price";
 import { FavoritesProvider } from "@/hooks/use-favorites";
 import { FollowingProvider } from "@/hooks/use-following";
@@ -53,6 +54,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }}
     >
       <CurrentUserProvider>
+        <WalletAccountWatcher />
         <FavoritesProvider>
           <FollowingProvider>
             <SolPriceProvider>
