@@ -275,12 +275,12 @@ export async function fetchPromptDetail(promptId: string, viewerUserId: string |
   // Removed prompts are only visible to the creator and to past buyers.
   if (prompt.status !== "active" && !isOwner && !hasPurchased) return null;
 
-  let hasAccess = false;
-  if (isOwner || hasPurchased) {
-    hasAccess = true;
-  } else if (prompt.status === "active" && prompt.price_sol === 0 && viewerUserId) {
-    hasAccess = true;
-  }
+  // Access requires either ownership or an explicit purchase row. Free
+  // prompts still need the buyer to click "Unlock for free", which writes
+  // a 0-SOL row in `purchases` via /api/prompts/unlock-free; that way the
+  // creator gets a real download/unlock count and free users go through
+  // the same gating UX as paid ones.
+  const hasAccess = Boolean(isOwner || hasPurchased);
 
   let myRating: number | null = null;
   let isFavorited = false;
