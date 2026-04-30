@@ -33,7 +33,10 @@ type EditorState = {
    *  form preview and decide what to do on cancel. */
   selected: string;
   label: string;
-  options: string;
+  /** Confirmed tags. The "currently typing" text lives separately in
+   *  optionDraft so adding a tag doesn't churn this list on every keystroke. */
+  options: string[];
+  optionDraft: string;
 };
 
 /** Strip the wrapping {{ }} markers if the selection is already a
@@ -76,10 +79,12 @@ export const HighlightablePromptInput = forwardRef<HighlightablePromptInputHandl
 
     const placeholderCount = (value.match(/\{\{[^{}]+?\}\}/g) ?? []).length;
 
-    // When the editor opens, focus the label field.
+    // Focus the label only when the editor opens (transition from null →
+    // non-null), not on every keystroke that updates editor state.
+    const editorOpen = editor !== null;
     useEffect(() => {
-      if (editor) labelRef.current?.focus();
-    }, [editor]);
+      if (editorOpen) labelRef.current?.focus();
+    }, [editorOpen]);
 
     const beginHighlight = useCallback(() => {
       const ta = textareaRef.current;
@@ -109,7 +114,8 @@ export const HighlightablePromptInput = forwardRef<HighlightablePromptInputHandl
         end: selectionEnd,
         selected,
         label: selected,
-        options: "",
+        options: [],
+        optionDraft: "",
       });
     }, [value, onChange]);
 
@@ -121,19 +127,21 @@ export const HighlightablePromptInput = forwardRef<HighlightablePromptInputHandl
       const trimmedLabel = editor.label.trim();
       if (!trimmedLabel) return; // require a label
 
-      // Normalize options: trim each, drop empties, dedupe while
-      // preserving order.
+      // Tags from the confirmed list, plus any draft text the user typed
+      // but hasn't pressed Enter on yet (so they don't lose it on Insert).
+      const draft = editor.optionDraft.trim();
       const seen = new Set<string>();
       const cleanedOpts: string[] = [];
-      for (const raw of editor.options.split(",")) {
+      for (const raw of [...editor.options, ...(draft ? [draft] : [])]) {
         const v = raw.trim();
         if (!v || seen.has(v)) continue;
         seen.add(v);
         cleanedOpts.push(v);
       }
-      // Disallow `|` and `}}` in label/option content to keep the syntax
-      // unambiguous. Strip them.
-      const safe = (s: string) => s.replace(/\|/g, "/").replace(/\}\}/g, "}");
+      // Disallow `|`, `,` and `}}` in label/option content to keep the
+      // syntax unambiguous. Substitute with similar-looking chars.
+      const safe = (s: string) =>
+        s.replace(/\|/g, "/").replace(/,/g, " ").replace(/\}\}/g, "}");
       const safeLabel = safe(trimmedLabel);
       const safeOpts = cleanedOpts.map(safe);
 
@@ -236,24 +244,68 @@ export const HighlightablePromptInput = forwardRef<HighlightablePromptInputHandl
                 <label className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                   Options{" "}
                   <span className="text-muted-foreground/60">
-                    (comma-separated, leave empty for free text)
+                    (type a value and press Enter; leave empty for free text)
                   </span>
                 </label>
-                <input
-                  type="text"
-                  value={editor.options}
-                  onChange={(e) =>
-                    setEditor((prev) => (prev ? { ...prev, options: e.target.value } : prev))
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      insertPlaceholder();
+                <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-md border border-input bg-tint-2 px-1.5 py-1 focus-within:border-foreground/30 focus-within:bg-tint-3 focus-within:ring-2 focus-within:ring-ring/40">
+                  {editor.options.map((opt, i) => (
+                    <span
+                      key={`${opt}-${i}`}
+                      className="inline-flex items-center gap-1 rounded-md border border-violet-400/30 bg-violet-500/15 px-1.5 py-0.5 text-[12px] text-violet-200"
+                    >
+                      {opt}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditor((prev) =>
+                            prev
+                              ? { ...prev, options: prev.options.filter((_, j) => j !== i) }
+                              : prev
+                          )
+                        }
+                        className="rounded p-0.5 hover:bg-violet-500/25"
+                        aria-label={`Remove ${opt}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    value={editor.optionDraft}
+                    onChange={(e) =>
+                      setEditor((prev) =>
+                        prev ? { ...prev, optionDraft: e.target.value } : prev
+                      )
                     }
-                  }}
-                  placeholder="e.g. man, woman"
-                  className="h-8 w-full rounded-md border border-input bg-tint-2 px-2 text-sm focus-visible:border-foreground/30 focus-visible:bg-tint-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                />
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const v = editor.optionDraft.trim();
+                        if (!v) return;
+                        setEditor((prev) =>
+                          prev && !prev.options.includes(v)
+                            ? { ...prev, options: [...prev.options, v], optionDraft: "" }
+                            : prev
+                            ? { ...prev, optionDraft: "" }
+                            : prev
+                        );
+                      } else if (
+                        e.key === "Backspace" &&
+                        editor.optionDraft === "" &&
+                        editor.options.length > 0
+                      ) {
+                        // Backspace on empty draft pops the last tag —
+                        // standard tag-input behavior.
+                        setEditor((prev) =>
+                          prev ? { ...prev, options: prev.options.slice(0, -1) } : prev
+                        );
+                      }
+                    }}
+                    placeholder={editor.options.length === 0 ? "e.g. man" : "Add another…"}
+                    className="min-w-[80px] flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground/60"
+                  />
+                </div>
               </div>
             </div>
 
