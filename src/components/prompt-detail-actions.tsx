@@ -16,6 +16,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useSolPrice } from "@/hooks/use-sol-price";
 import { useT } from "@/lib/i18n/provider";
 import { PromptText } from "./prompt-text";
+import { PromptCustomizer } from "./prompt-customizer";
 import type { PromptAnalysis } from "@/lib/prompt-analysis";
 import { Hash, Type, Sparkles as SparklesIcon } from "lucide-react";
 import { SolLogo } from "./sol-logo";
@@ -319,14 +320,23 @@ export function PromptDetailActions(props: Props) {
           <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             {t("detail.prompt")}
           </span>
-          {props.hasAccess && props.promptText && (
-            <Button size="sm" variant="ghost" onClick={copyPrompt} className="h-7 px-2 text-xs">
-              {t("detail.copy")}
-            </Button>
-          )}
+          {/* The interactive customizer has its own Copy button, so the
+              header copy button only shows for prompts without
+              placeholders. */}
+          {props.hasAccess &&
+            props.promptText &&
+            !(props.analysis && props.analysis.placeholderCount > 0) && (
+              <Button size="sm" variant="ghost" onClick={copyPrompt} className="h-7 px-2 text-xs">
+                {t("detail.copy")}
+              </Button>
+            )}
         </div>
         {props.hasAccess && props.promptText ? (
-          <PromptText text={props.promptText} className="p-4" />
+          props.analysis && props.analysis.placeholderCount > 0 ? (
+            <PromptCustomizer text={props.promptText} className="p-4" />
+          ) : (
+            <PromptText text={props.promptText} className="p-4" />
+          )
         ) : (
           <div className="relative min-h-36 p-4">
             <pre className="blur-prompt whitespace-pre-wrap break-words font-prompt text-[14px] leading-relaxed text-muted-foreground">
