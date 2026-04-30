@@ -29,13 +29,18 @@ export function PromptText({ text, className = "" }: { text: string; className?:
         {parts.map((part, i) => {
           const m = part.match(PLACEHOLDER_INNER);
           if (m) {
+            // Strip optional `|options` payload — readers should see the
+            // human-friendly label only.
+            const inner = m[1];
+            const pipeIdx = inner.indexOf("|");
+            const label = pipeIdx === -1 ? inner : inner.slice(0, pipeIdx);
             return (
               <span
                 key={i}
                 className="prompt-placeholder"
                 title="The creator marked this as something you should change to fit your own content."
               >
-                {m[1]}
+                {label}
               </span>
             );
           }
