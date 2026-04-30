@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Copy, RotateCcw, Sparkles } from "lucide-react";
+import { Copy, RotateCcw, Sparkles } from "lucide-react";
 import { useT } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 
@@ -133,40 +133,49 @@ export function PromptCustomizer({
         <p className="text-[11px] leading-snug text-muted-foreground">
           {t("detail.customize.hint")}
         </p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="space-y-3">
           {vars.map((v) => {
             const labelText = humanize(v.label);
-            const isSelect = v.options !== null && v.options.length > 0;
+            const hasOptions = v.options !== null && v.options.length > 0;
+            const current = values[v.key] ?? "";
             return (
               <div key={v.key}>
                 <label
-                  className="mb-1 block truncate text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground"
+                  className="mb-1.5 block truncate text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground"
                   title={labelText}
                 >
                   {labelText}
                 </label>
-                {isSelect ? (
-                  <div className="relative">
-                    <select
-                      value={values[v.key] ?? ""}
-                      onChange={(e) =>
-                        setValues((prev) => ({ ...prev, [v.key]: e.target.value }))
-                      }
-                      className="h-9 w-full appearance-none rounded-md border border-input bg-tint-2 px-3 pr-8 text-sm focus-visible:border-foreground/30 focus-visible:bg-tint-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                    >
-                      <option value="">— {labelText} —</option>
-                      {(v.options ?? []).map((opt) => (
-                        <option key={opt} value={opt}>
+                {hasOptions ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(v.options ?? []).map((opt) => {
+                      const active = current === opt;
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() =>
+                            setValues((prev) => ({
+                              ...prev,
+                              [v.key]: active ? "" : opt,
+                            }))
+                          }
+                          className={cn(
+                            "inline-flex h-8 items-center rounded-full border px-3 text-[12.5px] font-medium tracking-tight transition-colors",
+                            active
+                              ? "border-violet-400/40 bg-violet-500/20 text-violet-100"
+                              : "border-border bg-tint-1 text-foreground hover:bg-tint-2"
+                          )}
+                        >
                           {opt}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : (
                   <input
                     type="text"
-                    value={values[v.key] ?? ""}
+                    value={current}
                     onChange={(e) =>
                       setValues((prev) => ({ ...prev, [v.key]: e.target.value }))
                     }
